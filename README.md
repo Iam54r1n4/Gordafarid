@@ -1,2 +1,2 @@
-# Gordafrid
+# Gordafarid
 Simple proxy server/client

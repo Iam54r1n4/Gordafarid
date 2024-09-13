@@ -7,7 +7,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/Iam54r1n4/Gordafrid/internal/proxy_error"
+	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 // ReadWithContext reads data from a net.Conn with context support.

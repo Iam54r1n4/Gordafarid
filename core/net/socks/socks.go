@@ -9,8 +9,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/Iam54r1n4/Gordafrid/core/net/utils"
-	"github.com/Iam54r1n4/Gordafrid/internal/proxy_error"
+	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 // Constants for SOCKS5 protocol
