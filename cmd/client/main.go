@@ -17,6 +17,7 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
+// Config represents the global configuration for the application.
 var cfg *config.Config
 
 // main is the entry point of the application.
@@ -29,7 +30,7 @@ func main() {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
 
-	// Init encryption algrotithm
+	// Initialize encryption algorithm
 	aead, err := crypto.NewAEAD(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password))
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrCryptoInitFailed, err))
@@ -52,10 +53,21 @@ func main() {
 		logger.Debug("Accepted connection from:", conn.RemoteAddr())
 		go handleConnection(aead, conn)
 	}
-
 }
 
 // handleConnection manages the connection between the client and the remote server.
+// It establishes a connection to the remote server, sets up encryption, and handles
+// bidirectional data transfer between the client and the server.
+//
+// Parameters:
+//   - chacha: The cipher.AEAD instance for encryption/decryption
+//   - c: The client connection
+//
+// Flow:
+//  1. Establish connection to remote server
+//  2. Set up encrypted stream
+//  3. Start bidirectional data transfer
+//  4. Handle and log any errors
 func handleConnection(chacha cipher.AEAD, c net.Conn) {
 	defer c.Close()
 
@@ -65,11 +77,11 @@ func handleConnection(chacha cipher.AEAD, c net.Conn) {
 		logger.Warn(errors.Join(proxy_error.ErrClientToServerDialFailed, err))
 		return
 	}
-	// Convert incoming tcp connection into cipher stream (Read/Write methods are overrided)
+	// Convert incoming tcp connection into cipher stream (Read/Write methods are overridden)
 	rc = stream.NewCipherStream(rc, chacha)
 	defer rc.Close()
 
-	// Init bidirectional data transfering
+	// Initialize bidirectional data transferring
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	errChan := make(chan error, 2)
@@ -85,9 +97,9 @@ func handleConnection(chacha cipher.AEAD, c net.Conn) {
 		close(errChan)
 	}()
 
-	// Print the possible errors if there any
+	// Print the possible errors if there are any
 	for err := range errChan {
-		// the EOF error is common for now
+		// The EOF error is common and expected, so we ignore it
 		if !errors.Is(err, io.EOF) {
 			logger.Error(err)
 		}
