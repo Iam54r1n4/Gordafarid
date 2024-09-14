@@ -4,26 +4,20 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go, desig
 
 ## Technical Overview
 
-### Architecture
-
-The project consists of two main components:
-1. Client (cmd/client/main.go)
-2. Server (not shown in the provided context, but implied)
-
 ### Key Features
 
 - SOCKS5 protocol implementation
 - ChaCha20-Poly1305 encryption for secure communication
+- Context-aware read operations to do the socks5 handshake
 - Asynchronous I/O operations
-- Context-aware read operations
+- TCP-based connections
+- Custom packet format: [2-byte length prefix][nonce][encrypted payload]
 
-### Dependencies
-
-- Go 1.22.2
-- golang.org/x/crypto v0.27.0
-- golang.org/x/sys v0.25.0
 
 ### Core Components
+0. The project consists of two main components:
+   - Client (cmd/client/main.go)
+   - Server (cmd/server/main.go)
 
 1. SOCKS5 Implementation (core/net/socks/socks.go)
    - Handles SOCKS5 handshake process
@@ -33,23 +27,24 @@ The project consists of two main components:
    - CipherStream struct wraps net.Conn with AEAD encryption
    - Implements custom Read and Write methods for transparent encryption/decryption
 
-3. Utility Functions (core/net/utils/utils.go)
-   - ReadWithContext: Performs context-aware read operations
-
-4. Client Implementation (cmd/client/main.go)
-   - Listens for incoming connections
+3. Client Implementation (cmd/client/main.go)
+   - Listens for incoming Socks5 connections
    - Establishes encrypted connections to the remote server
    - Handles bidirectional data transfer
+4. Server Implementation (cmd/server/main.go)
+   - Listens for encrypted incoming connections
+   - Descrypts the encrypted packets
+   - Performs the Socks5 handshake
+   - Gets the target server address and port
+   - Establishes normal tcp-based connection to the target
+   - Handles bidirectional data transfer between target and the client
+5. Utility Functions (core/net/utils/utils.go)
+   - ReadWithContext: Performs context-aware read operations
 
 ### Encryption
 
 - Uses ChaCha20-Poly1305 AEAD cipher
 - 32-byte password for key generation
-
-### Network Communication
-
-- TCP-based connections
-- Custom packet format: [2-byte length prefix][nonce][encrypted payload]
 
 ### Error Handling
 
@@ -57,15 +52,32 @@ The project consists of two main components:
 - Extensive use of error wrapping and joining
 
 ## Usage
+0. Clone the repository
 
-1. Start the server (implementation not shown in the provided context)
-2. Run the client:
-3. Configure your application to use the SOCKS5 proxy at 127.0.0.1:8080
+1. Setup the server's config file (cmd/server/config.toml)
+2. Start the server
+```bash
+cd cmd/server/
+go run main.go
+```
+
+3. Setup the client's config file (cmd/client/config.toml)
+4. Start the client
+```bash
+cd cmd/client/
+go run main.go
+```
+5. Set the proxy to the client.address you defiend in the client's config file
 
 ## Security Considerations
-
-- Fixed encryption key (password) in the code; should be replaced with secure key management in production
 - No authentication mechanism implemented in the provided code
+
+### Dependencies
+
+- Go 1.22.2
+- golang.org/x/crypto v0.27.0
+- golang.org/x/sys v0.25.0
+- github.com/BurntSushi/toml v1.4.0
 
 ## License
 
