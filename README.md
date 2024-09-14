@@ -15,9 +15,6 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go, desig
 
 
 ### Core Components
-0. The project consists of two main components:
-   - Client (cmd/client/main.go)
-   - Server (cmd/server/main.go)
 
 1. SOCKS5 Implementation (core/net/socks/socks.go)
    - Handles SOCKS5 handshake process
