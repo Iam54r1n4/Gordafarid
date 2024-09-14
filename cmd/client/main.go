@@ -1,12 +1,11 @@
+// Package main is the entry point for the client application.
 package main
 
 import (
 	"crypto/cipher"
 	"errors"
 	"io"
-	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -14,55 +13,59 @@ import (
 
 	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 const (
-	laddr       = "127.0.0.1:8080"
-	raddr       = "127.0.0.1:9090"
+	// laddr is the local address the client listens on.
+	laddr = "127.0.0.1:8080"
+	// raddr is the remote address the client connects to.
+	raddr = "127.0.0.1:9090"
+	// dialTimeout is the maximum time allowed for establishing a connection.
 	dialTimeout = time.Second * 10
 
+	// password is the encryption key used for the ChaCha20-Poly1305 cipher.
 	password = "00000000000000000000000000000000"
 )
 
+// main is the entry point of the application.
+// It starts the client, and handles incoming connections.
 func main() {
-	// Init logger
-	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
-	log.SetOutput(os.Stdout)
-
 	// Listen for incoming connections
 	l, err := net.Listen("tcp", laddr)
 	if err != nil {
-		log.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
+		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
-	log.Println("Client is listening on: ", laddr)
+	logger.Info("Client is listening on: ", laddr)
 
 	// Init crypto
 	chacha, err := chacha20poly1305.New([]byte(password))
 	if err != nil {
-		log.Fatal(errors.Join(proxy_error.ErrChacha20poly1305Failed, err))
+		logger.Fatal(errors.Join(proxy_error.ErrChacha20poly1305Failed, err))
 	}
 
 	// Accept & Handle incoming connections
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			log.Println(errors.Join(proxy_error.ErrConnectionAccepting, err))
+			logger.Warn(errors.Join(proxy_error.ErrConnectionAccepting, err))
 			continue
 		}
-		log.Println("Accepted connection from:", conn.RemoteAddr())
+		logger.Debug("Accepted connection from:", conn.RemoteAddr())
 		go handleConnection(chacha, conn)
 	}
 
 }
 
+// handleConnection manages the connection between the client and the remote server.
 func handleConnection(chacha cipher.AEAD, c net.Conn) {
 	defer c.Close()
 
 	// Dial remote server (normal tcp)
 	rc, err := net.DialTimeout("tcp", raddr, dialTimeout)
 	if err != nil {
-		log.Println(errors.Join(proxy_error.ErrClientToServerDialFailed, err))
+		logger.Warn(errors.Join(proxy_error.ErrClientToServerDialFailed, err))
 		return
 	}
 	// Convert incoming tcp connection into cipher stream (Read/Write methods are overrided)
@@ -89,7 +92,7 @@ func handleConnection(chacha cipher.AEAD, c net.Conn) {
 	for err := range errChan {
 		// the EOF error is common for now
 		if !errors.Is(err, io.EOF) {
-			log.Println(err)
+			logger.Error(err)
 		}
 	}
 }
