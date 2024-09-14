@@ -11,15 +11,11 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
-// Config represents the global configuration for the application.
-var cfg *config.Config
-
 // main is the entry point of the application.
 // It loads configs, starts the client, and handles incoming connections.
 func main() {
 	// Load the config file
-	var err error
-	cfg, err = config.LoadConfig("./config.toml", config.ModeClient)
+	cfg, err := config.LoadConfig("./config.toml", config.ModeClient)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
