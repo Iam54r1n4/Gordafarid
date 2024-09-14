@@ -2,10 +2,22 @@ package proxy_error
 
 import "errors"
 
+// Config errors
+var ErrInvalidConfigFile = errors.New("invalid config file")
+
+// Listening errors
+var (
+	ErrServerListenFailed       = errors.New("server failed to start listening on specified address")
+	ErrClientListenFailed       = errors.New("client failed to start listening on specified address")
+	ErrServerDialFailed         = errors.New("server failed to establish connection with target")
+	ErrClientToServerDialFailed = errors.New("client failed to establish connection with proxy server")
+)
+
 // Connection errors
 var (
 	ErrConnectionClosed    = errors.New("connection unexpectedly closed")
 	ErrConnectionAccepting = errors.New("failed to accept incoming connection")
+	ErrTransferError       = errors.New("data transfer failed between client and server")
 )
 
 // Socks5 errors
@@ -26,17 +38,6 @@ var (
 	ErrSocks5UnableToReadPort            = errors.New("unable to read port")
 	ErrSocks5UnableToSendSuccessResponse = errors.New("unable to send success response(second response)") // Second response
 )
-
-// Listening errors
-var (
-	ErrServerListenFailed       = errors.New("server failed to start listening on specified address")
-	ErrClientListenFailed       = errors.New("client failed to start listening on specified address")
-	ErrServerDialFailed         = errors.New("server failed to establish connection with target")
-	ErrClientToServerDialFailed = errors.New("client failed to establish connection with proxy server")
-)
-
-// Copying errors
-var ErrTransferError = errors.New("data transfer failed between client and server")
 
 // Crypto errors
 var ErrChacha20poly1305Failed = errors.New("encryption/decryption failed using ChaCha20-Poly1305")
