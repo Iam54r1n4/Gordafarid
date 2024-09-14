@@ -26,6 +26,7 @@ const (
 	ColorYellow = "\033[33m"
 	ColorBlue   = "\033[34m"
 	ColorPurple = "\033[35m"
+	ColorCyan   = "\033[36m"
 )
 
 // Logger struct
@@ -52,7 +53,7 @@ func init() {
 func NewLogger(level int, output io.Writer) *Logger {
 	return &Logger{
 		level: level,
-		log:   log.New(output, "", log.LstdFlags),
+		log:   log.New(output, "", 0),
 		logLevel: map[int]string{
 			DEBUG: "DEBUG",
 			INFO:  "INFO",
@@ -80,7 +81,7 @@ func (l *Logger) logMessage(level int, args ...any) {
 	if level >= l.level {
 		timestamp := time.Now().Format(time.RFC3339)
 		message := fmt.Sprint(args...)
-		logOutput := fmt.Sprintf("%s [%s%s%s] %s", timestamp, l.colors[level], l.logLevel[level], ColorReset, message)
+		logOutput := fmt.Sprintf("[%s%s%s] [%s%s%s] - %s", ColorCyan, timestamp, ColorReset, l.colors[level], l.logLevel[level], ColorReset, message)
 		l.log.Println(logOutput)
 	}
 }
