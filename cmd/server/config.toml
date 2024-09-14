@@ -2,6 +2,7 @@
 address = "127.0.0.1:9090"
 
 [crypto]
+algorithm = "chacha20-poly1305" # only supports chacha20-poly1305 for now
 password = "00000000000000000000000000000000"
 
 dialTimeout = 10
