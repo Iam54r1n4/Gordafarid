@@ -9,6 +9,7 @@ var (
 	ErrCryptoPasswordEmpty        = errors.New("crypto.password is empty")
 	ErrCryptoAlgorithmEmpty       = errors.New("crypto.algorithm is empty")
 	ErrCryptoAlgorithmUnsupported = errors.New("crypto.algorithm is not supported")
+	ErrCryptoInitFailed           = errors.New("the crypto initialization failed")
 )
 
 // Listening errors
@@ -44,6 +45,3 @@ var (
 	ErrSocks5UnableToReadPort            = errors.New("unable to read port")
 	ErrSocks5UnableToSendSuccessResponse = errors.New("unable to send success response(second response)") // Second response
 )
-
-// Crypto errors
-var ErrChacha20poly1305Failed = errors.New("encryption/decryption failed using ChaCha20-Poly1305")
