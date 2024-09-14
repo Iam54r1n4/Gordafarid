@@ -2,33 +2,20 @@
 package main
 
 import (
-	"context"
-	"crypto/cipher"
 	"errors"
-	"fmt"
-	"io"
-	"net"
-	"sync"
-	"time"
 
 	"github.com/Iam54r1n4/Gordafarid/core/crypto"
-	"github.com/Iam54r1n4/Gordafarid/core/net/socks"
-	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
-	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/core/server"
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
-// Config holds the application configuration
-var cfg *config.Config
-
 // main is the entry point of the application.
 // It loads configs, starts the server, and handles incoming connections.
 func main() {
-	var err error
 	// Load the configuration from the specified file
-	cfg, err = config.LoadConfig("./config.toml", config.ModeServer)
+	cfg, err := config.LoadConfig("./config.toml", config.ModeServer)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
@@ -39,97 +26,11 @@ func main() {
 		logger.Fatal(errors.Join(proxy_error.ErrCryptoInitFailed, err))
 	}
 
-	// Listen for incoming connections
-	l, err := net.Listen("tcp", cfg.Server.Address)
-	if err != nil {
+	server := server.NewServer(cfg, aead)
+	if err = server.Listen(); err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
-	logger.Info("Server is listening on: ", cfg.Server.Address)
 
-	// Accept and handle incoming connections
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			logger.Warn(errors.Join(proxy_error.ErrConnectionAccepting, err))
-			continue
-		}
-		logger.Info("Accepted connection from:", conn.RemoteAddr())
-		go handleConnection(context.Background(), aead, conn)
-	}
-}
+	server.Listen()
 
-// handleConnection manages a single client connection.
-// It performs the SOCKS5 handshake, establishes a connection to the target server,
-// and facilitates bidirectional data transfer between the client and the target server.
-//
-// Parameters:
-//   - ctx: The context for the connection
-//   - chacha: The cipher for encryption/decryption
-//   - c: The client connection
-func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
-	defer c.Close()
-	// Convert incoming TCP connection into cipher stream (Read/Write methods are overridden)
-	c = stream.NewCipherStream(c, chacha)
-
-	// Perform SOCKS5 handshake
-	logger.Debug("Performing handshake...")
-	hChan := make(chan socks.HandshakeChan)
-	handshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.HandshakeTimeout)*time.Second)
-	defer cancel()
-	go socks.Handshake(handshakeCtx, c, hChan)
-
-	// Wait for handshake result
-	select {
-	case <-handshakeCtx.Done():
-		logger.Warn(proxy_error.ErrSocks5HandshakeTimeout)
-	case hRes := <-hChan:
-		// Check for handshake error
-		if hRes.Err != nil {
-			logger.Warn(errors.Join(proxy_error.ErrSocks5HandshakeFailed, hRes.Err))
-			return
-		}
-
-		// Dial to target server
-		logger.Debug("Handshake done")
-		logger.Debug("Connecting to:", hRes.TAddr)
-		tconn, err := net.DialTimeout("tcp", hRes.TAddr, time.Duration(cfg.DialTimeout)*time.Second)
-		if err != nil {
-			logger.Warn(errors.Join(proxy_error.ErrServerDialFailed, err))
-			return
-		}
-		defer tconn.Close()
-
-		// Log target server address
-		if hRes.ATyp == socks.AtypDomain {
-			logger.Debug(fmt.Sprintf("Connected to: %s(%s)", hRes.TAddr, tconn.RemoteAddr()))
-		} else {
-			logger.Debug("Connected to: ", tconn.RemoteAddr())
-		}
-
-		// Perform relay proxying
-		logger.Debug(fmt.Sprintf("Proxying between %s/%s", c.RemoteAddr(), tconn.RemoteAddr()))
-		// Initialize bidirectional data transfer
-		wg := sync.WaitGroup{}
-		wg.Add(2)
-		errChan := make(chan error, 2)
-
-		// Goroutine to copy data from client to remote
-		go utils.DataTransfering(&wg, errChan, tconn, c)
-		// Goroutine to copy data from remote to client
-		go utils.DataTransfering(&wg, errChan, c, tconn)
-
-		// Close the errChan after the dataTransfering goroutines are finished
-		go func() {
-			wg.Wait()
-			close(errChan)
-		}()
-
-		// Print the possible errors if there are any
-		for err := range errChan {
-			// The EOF error is common and expected
-			if !errors.Is(err, io.EOF) {
-				logger.Error(err)
-			}
-		}
-	}
 }
