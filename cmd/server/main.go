@@ -31,6 +31,6 @@ func main() {
 		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
 
-	server.Listen()
+	server.Start()
 
 }
