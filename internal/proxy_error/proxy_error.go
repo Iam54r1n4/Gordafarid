@@ -3,7 +3,13 @@ package proxy_error
 import "errors"
 
 // Config errors
-var ErrInvalidConfigFile = errors.New("invalid config file")
+var (
+	ErrInvalidConfigFile          = errors.New("invalid config file")
+	ErrCryptoPasswordInvalid      = errors.New("crypto.password length is invalid")
+	ErrCryptoPasswordEmpty        = errors.New("crypto.password is empty")
+	ErrCryptoAlgorithmEmpty       = errors.New("crypto.algorithm is empty")
+	ErrCryptoAlgorithmUnsupported = errors.New("crypto.algorithm is not supported")
+)
 
 // Listening errors
 var (
