@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Iam54r1n4/Gordafarid/core/crypto"
+	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 const defaultConfigFilePath = "./config.toml"
@@ -24,7 +26,8 @@ type Config struct {
 		Address string
 	} `toml:"server"`
 	Crypto struct {
-		Password string
+		Algorithm string
+		Password  string
 	} `toml:"crypto"`
 
 	DialTimeout      int `toml:"dialtimeout"`      // In seconds
@@ -57,11 +60,26 @@ func validateConfig(cfg *Config, mode *Mode) error {
 	if cfg.Server.Address == "" {
 		missingFields = append(missingFields, "server.address")
 	}
-	if cfg.Crypto.Password == "" {
-		missingFields = append(missingFields, "crypto.password")
-	}
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing fields: %s", strings.Join(missingFields, ", "))
+	}
+
+	return validateCryptoFields(cfg)
+
+}
+func validateCryptoFields(cfg *Config) error {
+	// Check
+	if cfg.Crypto.Algorithm == "" {
+		return proxy_error.ErrCryptoAlgorithmEmpty
+	}
+	if !crypto.IsAlgorithmSupported(cfg.Crypto.Algorithm) {
+		return proxy_error.ErrCryptoAlgorithmUnsupported
+	}
+	if cfg.Crypto.Password == "" {
+		return proxy_error.ErrCryptoPasswordEmpty
+	}
+	if !crypto.IsKeyLengthFine(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password)) {
+		return proxy_error.ErrCryptoPasswordInvalid
 	}
 	return nil
 }
