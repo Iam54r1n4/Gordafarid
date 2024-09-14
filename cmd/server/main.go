@@ -11,8 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/chacha20poly1305"
-
+	"github.com/Iam54r1n4/Gordafarid/core/crypto"
 	"github.com/Iam54r1n4/Gordafarid/core/net/socks"
 	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
@@ -32,18 +31,18 @@ func main() {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
 
+	// Init encryption algrotithm
+	aead, err := crypto.NewAEAD(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password))
+	if err != nil {
+		logger.Fatal(errors.Join(proxy_error.ErrCryptoInitFailed, err))
+	}
+
 	// Listen for incoming connections
 	l, err := net.Listen("tcp", cfg.Server.Address)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
 	logger.Info("Server is listening on: ", cfg.Server.Address)
-
-	// Init crypto
-	chacha, err := chacha20poly1305.New([]byte(cfg.Crypto.Password))
-	if err != nil {
-		logger.Fatal(errors.Join(proxy_error.ErrChacha20poly1305Failed, err))
-	}
 
 	// Accept & Handle incoming connections
 	for {
@@ -53,7 +52,7 @@ func main() {
 			continue
 		}
 		logger.Info("Accepted connection from:", conn.RemoteAddr())
-		go handleConnection(context.Background(), chacha, conn)
+		go handleConnection(context.Background(), aead, conn)
 	}
 }
 
