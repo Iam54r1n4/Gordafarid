@@ -72,14 +72,11 @@ func validateCryptoFields(cfg *Config) error {
 	if cfg.Crypto.Algorithm == "" {
 		return proxy_error.ErrCryptoAlgorithmEmpty
 	}
-	if !crypto.IsAlgorithmSupported(cfg.Crypto.Algorithm) {
-		return proxy_error.ErrCryptoAlgorithmUnsupported
-	}
 	if cfg.Crypto.Password == "" {
 		return proxy_error.ErrCryptoPasswordEmpty
 	}
-	if !crypto.IsKeyLengthFine(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password)) {
-		return proxy_error.ErrCryptoPasswordInvalid
+	if err := crypto.IsCryptoSupported(cfg.Crypto.Algorithm, cfg.Crypto.Password); err != nil {
+		return err
 	}
 	return nil
 }
