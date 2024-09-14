@@ -15,7 +15,7 @@ import (
 // It loads configs, starts the server, and handles incoming connections.
 func main() {
 	// Load the configuration from the specified file
-	cfg, err := config.LoadConfig("./config.toml", config.ModeServer)
+	cfg, err := config.LoadConfig(config.DefaultConfigFilePath, config.ModeServer)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
