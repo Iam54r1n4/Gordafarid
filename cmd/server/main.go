@@ -84,8 +84,8 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 		}
 
 		// Dial to target server
-		fmt.Println("Handshake done")
-		fmt.Println("Connecting to:", hRes.TAddr)
+		logger.Debug("Handshake done")
+		logger.Debug("Connecting to:", hRes.TAddr)
 		tconn, err := net.DialTimeout("tcp", hRes.TAddr, time.Duration(cfg.DialTimeout)*time.Second)
 		if err != nil {
 			logger.Warn(errors.Join(proxy_error.ErrServerDialFailed, err))
