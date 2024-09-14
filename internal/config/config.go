@@ -9,7 +9,7 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
-const defaultConfigFilePath = "./config.toml"
+const DefaultConfigFilePath = "./config.toml"
 
 type Mode int
 
@@ -36,7 +36,7 @@ type Config struct {
 
 func LoadConfig(path string, mode Mode) (*Config, error) {
 	if path == "" {
-		path = defaultConfigFilePath
+		path = DefaultConfigFilePath
 	}
 	var config Config
 	if _, err := toml.DecodeFile(path, &config); err != nil {
