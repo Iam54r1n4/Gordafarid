@@ -2,8 +2,13 @@
 address = "127.0.0.1:9090"
 
 [crypto]
-algorithm = "chacha20-poly1305" # only supports chacha20-poly1305 for now
+# supported algorithms:
+# "aes-256-gcm" (password length must be 32 bytes)
+# "aes-192-gcm" (password length must be 24 bytes)
+# "aes-128-gcm" (password length must be 16 bytes)
+algorithm = "chacha20-poly1305"
 password = "00000000000000000000000000000000"
 
+# In seconds
 dialTimeout = 10
 handshakeTimeout = 10
