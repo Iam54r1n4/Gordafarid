@@ -15,12 +15,14 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
+// Client represents the client-side of the proxy.
 type Client struct {
-	cfg      *config.Config
-	aead     cipher.AEAD
-	listener net.Listener
+	cfg      *config.Config // Configuration for the client
+	aead     cipher.AEAD    // Authenticated Encryption with Associated Data for encryption
+	listener net.Listener   // TCP listener for incoming connections
 }
 
+// NewClient creates and returns a new Client instance.
 func NewClient(cfg *config.Config, aead cipher.AEAD) *Client {
 	return &Client{
 		cfg:  cfg,
@@ -28,8 +30,8 @@ func NewClient(cfg *config.Config, aead cipher.AEAD) *Client {
 	}
 }
 
+// Listen starts the client's TCP listener on the configured address.
 func (c *Client) Listen() error {
-	// Listen for incoming connections
 	var err error
 	c.listener, err = net.Listen("tcp", c.cfg.Client.Address)
 	if err != nil {
@@ -39,8 +41,8 @@ func (c *Client) Listen() error {
 	return nil
 }
 
+// Start begins accepting and handling incoming connections.
 func (c *Client) Start() error {
-	// Accept & Handle incoming connections
 	for {
 		conn, err := c.listener.Accept()
 		if err != nil {
@@ -58,7 +60,7 @@ func (c *Client) Start() error {
 //
 // Parameters:
 //   - aead: The cipher.AEAD instance for encryption/decryption
-//   - c: The client connection
+//   - conn: The client connection
 //
 // Flow:
 //  1. Establish connection to remote server
