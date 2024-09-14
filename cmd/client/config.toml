@@ -1,0 +1,10 @@
+[client]
+address = "127.0.0.1:8080"
+
+[server]
+address = "127.0.0.1:9090"
+
+[crypto]
+password = "00000000000000000000000000000000"
+
+dialtimeout = 10

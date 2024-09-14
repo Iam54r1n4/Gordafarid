@@ -13,34 +13,32 @@ import (
 
 	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/internal/config"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
-const (
-	// laddr is the local address the client listens on.
-	laddr = "127.0.0.1:8080"
-	// raddr is the remote address the client connects to.
-	raddr = "127.0.0.1:9090"
-	// dialTimeout is the maximum time allowed for establishing a connection.
-	dialTimeout = time.Second * 10
-
-	// password is the encryption key used for the ChaCha20-Poly1305 cipher.
-	password = "00000000000000000000000000000000"
-)
+var cfg *config.Config
 
 // main is the entry point of the application.
-// It starts the client, and handles incoming connections.
+// It loads configs, starts the client, and handles incoming connections.
 func main() {
+	// Load the config file
+	var err error
+	cfg, err = config.LoadConfig("./config.toml", config.ModeClient)
+	if err != nil {
+		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
+	}
+
 	// Listen for incoming connections
-	l, err := net.Listen("tcp", laddr)
+	l, err := net.Listen("tcp", cfg.Client.Address)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
-	logger.Info("Client is listening on: ", laddr)
+	logger.Info("Client is listening on: ", cfg.Client.Address)
 
 	// Init crypto
-	chacha, err := chacha20poly1305.New([]byte(password))
+	chacha, err := chacha20poly1305.New([]byte(cfg.Crypto.Password))
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrChacha20poly1305Failed, err))
 	}
@@ -63,7 +61,7 @@ func handleConnection(chacha cipher.AEAD, c net.Conn) {
 	defer c.Close()
 
 	// Dial remote server (normal tcp)
-	rc, err := net.DialTimeout("tcp", raddr, dialTimeout)
+	rc, err := net.DialTimeout("tcp", cfg.Server.Address, time.Duration(cfg.DialTimeout)*time.Second)
 	if err != nil {
 		logger.Warn(errors.Join(proxy_error.ErrClientToServerDialFailed, err))
 		return

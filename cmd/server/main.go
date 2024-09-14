@@ -16,34 +16,31 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/core/net/socks"
 	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/internal/config"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
-const (
-	// laddr is the local address on which the server listens.
-	laddr = "127.0.0.1:9090"
-	// dialTimeout is the maximum time allowed for establishing a connection to the target server.
-	dialTimeout = time.Second * 10
-	// handshakeTimeout is the maximum time allowed for completing the SOCKS5 handshake.
-	handshakeTimeout = time.Second * 10
-
-	// password is the encryption key used for the ChaCha20-Poly1305 cipher.
-	password = "00000000000000000000000000000000"
-)
+var cfg *config.Config
 
 // main is the entry point of the application.
-// It starts the server, and handles incoming connections.
+// It loads configs, starts the server, and handles incoming connections.
 func main() {
+	var err error
+	cfg, err = config.LoadConfig("./config.toml", config.ModeServer)
+	if err != nil {
+		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
+	}
+
 	// Listen for incoming connections
-	l, err := net.Listen("tcp", laddr)
+	l, err := net.Listen("tcp", cfg.Server.Address)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
 	}
-	logger.Info("Server is listening on: ", laddr)
+	logger.Info("Server is listening on: ", cfg.Server.Address)
 
 	// Init crypto
-	chacha, err := chacha20poly1305.New([]byte(password))
+	chacha, err := chacha20poly1305.New([]byte(cfg.Crypto.Password))
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrChacha20poly1305Failed, err))
 	}
@@ -71,7 +68,7 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 	// Perform socks5 handshake
 	logger.Debug("Performing handshake...")
 	hChan := make(chan socks.HandshakeChan)
-	handshakeCtx, cancel := context.WithTimeout(ctx, handshakeTimeout)
+	handshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.HandshakeTimeout)*time.Second)
 	defer cancel()
 	go socks.Handshake(handshakeCtx, c, hChan)
 
@@ -89,7 +86,7 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 		// Dial to target server
 		fmt.Println("Handshake done")
 		fmt.Println("Connecting to:", hRes.TAddr)
-		tconn, err := net.DialTimeout("tcp", hRes.TAddr, dialTimeout)
+		tconn, err := net.DialTimeout("tcp", hRes.TAddr, time.Duration(cfg.DialTimeout)*time.Second)
 		if err != nil {
 			logger.Warn(errors.Join(proxy_error.ErrServerDialFailed, err))
 			return
@@ -128,6 +125,5 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 				logger.Error(err)
 			}
 		}
-		fmt.Println("----------------------------------------")
 	}
 }
