@@ -18,12 +18,14 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
+// Server represents the main server structure.
 type Server struct {
-	cfg      *config.Config
-	aead     cipher.AEAD
-	listener net.Listener
+	cfg      *config.Config // Configuration for the server
+	aead     cipher.AEAD    // Authenticated Encryption with Associated Data for encryption
+	listener net.Listener   // Network listener for incoming connections
 }
 
+// NewServer creates and returns a new Server instance.
 func NewServer(cfg *config.Config, aead cipher.AEAD) *Server {
 	return &Server{
 		cfg:  cfg,
@@ -31,8 +33,8 @@ func NewServer(cfg *config.Config, aead cipher.AEAD) *Server {
 	}
 }
 
+// Listen starts the server listening for incoming connections.
 func (s *Server) Listen() error {
-	// Listen for incoming connections
 	var err error
 	s.listener, err = net.Listen("tcp", s.cfg.Server.Address)
 	if err != nil {
@@ -42,8 +44,8 @@ func (s *Server) Listen() error {
 	return nil
 }
 
+// Start begins accepting and handling incoming connections.
 func (s *Server) Start() error {
-	// Accept and handle incoming connections
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
