@@ -20,18 +20,20 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
+// Config holds the application configuration
 var cfg *config.Config
 
 // main is the entry point of the application.
 // It loads configs, starts the server, and handles incoming connections.
 func main() {
 	var err error
+	// Load the configuration from the specified file
 	cfg, err = config.LoadConfig("./config.toml", config.ModeServer)
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
 	}
 
-	// Init encryption algrotithm
+	// Initialize the encryption algorithm
 	aead, err := crypto.NewAEAD(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password))
 	if err != nil {
 		logger.Fatal(errors.Join(proxy_error.ErrCryptoInitFailed, err))
@@ -44,7 +46,7 @@ func main() {
 	}
 	logger.Info("Server is listening on: ", cfg.Server.Address)
 
-	// Accept & Handle incoming connections
+	// Accept and handle incoming connections
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -59,12 +61,17 @@ func main() {
 // handleConnection manages a single client connection.
 // It performs the SOCKS5 handshake, establishes a connection to the target server,
 // and facilitates bidirectional data transfer between the client and the target server.
+//
+// Parameters:
+//   - ctx: The context for the connection
+//   - chacha: The cipher for encryption/decryption
+//   - c: The client connection
 func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 	defer c.Close()
-	// Convert incoming tcp connection into cipher stream (Read/Write methods are overrided)
+	// Convert incoming TCP connection into cipher stream (Read/Write methods are overridden)
 	c = stream.NewCipherStream(c, chacha)
 
-	// Perform socks5 handshake
+	// Perform SOCKS5 handshake
 	logger.Debug("Performing handshake...")
 	hChan := make(chan socks.HandshakeChan)
 	handshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.HandshakeTimeout)*time.Second)
@@ -99,9 +106,9 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 			logger.Debug("Connected to: ", tconn.RemoteAddr())
 		}
 
-		// Do realy proxying
+		// Perform relay proxying
 		logger.Debug(fmt.Sprintf("Proxying between %s/%s", c.RemoteAddr(), tconn.RemoteAddr()))
-		// Init bidirectional data transfering
+		// Initialize bidirectional data transfer
 		wg := sync.WaitGroup{}
 		wg.Add(2)
 		errChan := make(chan error, 2)
@@ -117,9 +124,9 @@ func handleConnection(ctx context.Context, chacha cipher.AEAD, c net.Conn) {
 			close(errChan)
 		}()
 
-		// Print the possible errors if there any
+		// Print the possible errors if there are any
 		for err := range errChan {
-			// the EOF error is common for now
+			// The EOF error is common and expected
 			if !errors.Is(err, io.EOF) {
 				logger.Error(err)
 			}
