@@ -27,33 +27,65 @@ const (
 
 	// AtypDomain represents the address type for domain names
 	AtypDomain = 3
+
+	// NO ACCEPTABLE METHODS
+	NoAcceptableMethods = 0xFF
 )
 
 func ValidateSocks5(timeoutMilliseconds int, c net.Conn) error {
-	// Sample of valid SOCKS5 header in for client proxy:
-	//     VER=5
-	//     NMETHODS=1
-	//     METHODS=0
-	// The only valid value in the client proxy for METHODS is 0x00, which indicates that the client(local application) is using "No Authentication"
+	buf := make([]byte, 2)
 
-	headerBuf := make([]byte, 3)
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMilliseconds)*time.Millisecond)
+	validationCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMilliseconds)*time.Millisecond)
 	defer cancel()
-	if _, err := utils.ReadWithContext(timeoutCtx, c, headerBuf); err != nil {
+	if _, err := utils.ReadWithContext(validationCtx, c, buf); err != nil {
 		return errors.Join(proxy_error.ErrSocks5UnableToReadVersion, err)
 	}
 	// Check the request version
-	if headerBuf[0] != version {
-		return errors.Join(proxy_error.ErrSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", headerBuf[0]))
+	if buf[0] != version {
+		return errors.Join(proxy_error.ErrSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", buf[0]))
 	}
-	// Check the request nMethods field
-	if headerBuf[1] != 1 {
-		return errors.Join(proxy_error.ErrSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", headerBuf[1]))
+
+	// Read the request nMethods field
+	if buf[1] == 0 {
+		return errors.Join(proxy_error.ErrSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", buf[1]))
 	}
-	if headerBuf[2] != 0 {
-		return errors.Join(proxy_error.ErrSocks5InvalidMethod, fmt.Errorf("sent auth method: %d", headerBuf[2]))
+
+	// Read the request Methods field
+	// NOTICE: At the time there are two supported authentication method:
+	//     METHODS=0x00 (no authentication)
+	//     METHOD=0x02 (username/password)
+	methods := make([]byte, buf[1])
+	if _, err := utils.ReadWithContext(validationCtx, c, methods); err != nil {
+		return errors.Join(proxy_error.ErrSocks5UnableToDiscardNMethods, fmt.Errorf("sent nmethods: %d", buf[1]), err)
 	}
-	return nil
+	_, err := selectPreferredSocks5AuthMethod(methods)
+	return err
+}
+
+// selectPreferredSocks5AuthMethod selects the preferred authentication method for SOCKS5 protocol.
+//
+// It takes a slice of bytes representing the supported authentication methods
+// and returns the preferred method or an error if no acceptable method is found.
+//
+// The function prioritizes methods in the following order:
+// 1. No authentication (method 0)
+// 2. Username/password authentication (method 2)
+//
+// Parameters:
+//   - methods: A slice of bytes representing the supported authentication methods.
+//
+// Returns:
+//   - byte: The selected authentication method (0, 2, or NoAcceptableMethods).
+//   - error: An error if no acceptable method is found, nil otherwise.
+func selectPreferredSocks5AuthMethod(methods []byte) (byte, error) {
+	for _, method := range methods {
+		// If the method is 0 or 2, the client supports no authentication or username/password authentication
+		if method == 0 || method == 2 {
+			return method, nil
+		}
+	}
+
+	return NoAcceptableMethods, errors.Join(proxy_error.ErrSocks5InvalidMethod, fmt.Errorf("sent auth method: %s", methods))
 }
 
 // HandshakeChan is used to communicate the result of the handshake
@@ -106,143 +138,103 @@ type HandshakeChan struct {
 // BND.ADDR: Server bound address
 // BND.PORT: Server bound port
 func Handshake(ctx context.Context, c net.Conn, hChan chan<- HandshakeChan) {
+
 	defer close(hChan)
 
-	if err := checkVersion(ctx, c); err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	if err := sendVersionResponse(c); err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	if err := checkRequest(ctx, c); err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	atyp, taddr, err := readAddress(ctx, c)
-	if err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	tport, err := readPort(ctx, c)
-	if err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	fullTargetAddr := net.JoinHostPort(taddr, fmt.Sprint(tport))
-
-	if err := sendSuccessResponse(c); err != nil {
-		hChan <- HandshakeChan{Err: err}
-		return
-	}
-
-	hChan <- HandshakeChan{TAddr: fullTargetAddr, ATyp: atyp}
-}
-
-func checkVersion(ctx context.Context, c net.Conn) error {
+	// Read the SOCKS version
 	buf := make([]byte, 2)
 	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return errors.Join(proxy_error.ErrSocks5UnableToReadVersion, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadVersion, err)}
+		return
 	}
+	// Return error if the version is not supported
 	if buf[0] != version {
-		return errors.Join(proxy_error.ErrSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", buf[0]))
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", buf[0]))}
+		return
 	}
+
+	// Read the number of authentication methods
 	nMethods := buf[1]
+	// Discard the SOCKS5 authentication methods
 	if _, err := io.CopyN(io.Discard, c, int64(nMethods)); err != nil {
-		return errors.Join(proxy_error.ErrSocks5UnableToDiscardNMethods, fmt.Errorf("sent nmethods: %d", nMethods), err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToDiscardNMethods, fmt.Errorf("sent nmethods: %d", nMethods), err)}
+		return
 	}
-	return nil
-}
 
-func sendVersionResponse(c net.Conn) error {
+	// Send the SOCKS5 response (version and no authentication required)
 	if _, err := c.Write([]byte{version, 0}); err != nil {
-		return errors.Join(proxy_error.ErrSocks5UnableToSendVersionResponse, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToSendVersionResponse, err)}
+		return
 	}
-	return nil
-}
 
-func checkRequest(ctx context.Context, c net.Conn) error {
-	buf := make([]byte, 3)
+	// Read the SOCKS5 request
+	buf = make([]byte, 3)
 	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return errors.Join(proxy_error.ErrSocks5UnableToReadRequest, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadRequest, err)}
+		return
 	}
 	if buf[0] != version || buf[1] != 1 {
-		return errors.Join(proxy_error.ErrSocks5UnsupportedVersionOrCommand, fmt.Errorf("unsupported socks request:\nVersion: %d\nCommand: %d", buf[0], buf[1]))
-	}
-	return nil
-}
-
-func readAddress(ctx context.Context, c net.Conn) (byte, string, error) {
-	buf := make([]byte, 1)
-	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return 0, "", errors.Join(proxy_error.ErrSocks5UnableToReadAddressType, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnsupportedVersionOrCommand, fmt.Errorf("unsupported socks request:\nVersion: %d\nCommand: %d", buf[0], buf[1]))}
+		return
 	}
 
-	atyp := buf[0]
+	// Read the address type
+	if _, err := utils.ReadWithContext(ctx, c, buf[:1]); err != nil {
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadAddressType, err)}
+		return
+	}
+
 	var taddr string
-	var err error
-
+	var atyp byte = buf[0]
 	switch atyp {
-	case AtypIPv4:
-		taddr, err = readIPv4(ctx, c)
-	case AtypIPv6:
-		taddr, err = readIPv6(ctx, c)
-	case AtypDomain:
-		taddr, err = readDomain(ctx, c)
+	case AtypIPv4: // IPv4
+		buf = make([]byte, net.IPv4len)
+		if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
+			hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadIpv4, err)}
+			return
+		}
+		taddr = net.IP(buf).String()
+	case AtypIPv6: // IPv6
+		buf = make([]byte, net.IPv6len)
+		if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
+			hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadIpv6, err)}
+			return
+		}
+		taddr = string(buf)
+	case AtypDomain: // Domain
+		if _, err := utils.ReadWithContext(ctx, c, buf[:1]); err != nil {
+			hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)}
+			return
+		}
+		buf = make([]byte, buf[0])
+		if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
+			hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)}
+			return
+		}
+		taddr = string(buf)
 	default:
-		err = errors.Join(proxy_error.ErrSocks5UnsupportedAddressType, fmt.Errorf("sent address type: %d", atyp))
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnsupportedAddressType, fmt.Errorf("sent address type: %d", atyp))}
+		return
 	}
 
-	return atyp, taddr, err
-}
-
-func readIPv4(ctx context.Context, c net.Conn) (string, error) {
-	buf := make([]byte, net.IPv4len)
+	// Read the port
+	buf = make([]byte, 2)
 	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return "", errors.Join(proxy_error.ErrSocks5UnableToReadIpv4, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToReadPort, err)}
+		return
 	}
-	return net.IP(buf).String(), nil
-}
+	var tport uint16 = binary.BigEndian.Uint16(buf)
 
-func readIPv6(ctx context.Context, c net.Conn) (string, error) {
-	buf := make([]byte, net.IPv6len)
-	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return "", errors.Join(proxy_error.ErrSocks5UnableToReadIpv6, err)
-	}
-	return string(buf), nil
-}
+	// Combine the address and port into a single string
+	var fullTargetAddr string = net.JoinHostPort(taddr, fmt.Sprint(tport))
 
-func readDomain(ctx context.Context, c net.Conn) (string, error) {
-	buf := make([]byte, 1)
-	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return "", errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
-	}
-	domainLen := buf[0]
-	buf = make([]byte, domainLen)
-	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return "", errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
-	}
-	return string(buf), nil
-}
-
-func readPort(ctx context.Context, c net.Conn) (uint16, error) {
-	buf := make([]byte, 2)
-	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
-		return 0, errors.Join(proxy_error.ErrSocks5UnableToReadPort, err)
-	}
-	return binary.BigEndian.Uint16(buf), nil
-}
-
-func sendSuccessResponse(c net.Conn) error {
+	// Send the SOCKS5 response (success)
 	res := []byte{version, 0, 0, 1, 0, 0, 0, 0, 0, 0}
 	if _, err := c.Write(res); err != nil {
-		return errors.Join(proxy_error.ErrSocks5UnableToSendSuccessResponse, err)
+		hChan <- HandshakeChan{Err: errors.Join(proxy_error.ErrSocks5UnableToSendSuccessResponse, err)}
+		return
 	}
-	return nil
+
+	// Send the successful handshake result
+	hChan <- HandshakeChan{TAddr: fullTargetAddr, ATyp: atyp}
 }
