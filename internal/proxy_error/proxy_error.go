@@ -18,6 +18,7 @@ var (
 	ErrClientListenFailed       = errors.New("client failed to start listening on specified address")
 	ErrServerDialFailed         = errors.New("server failed to establish connection with target")
 	ErrClientToServerDialFailed = errors.New("client failed to establish connection with proxy server")
+	ErrListenerIsNotInitialized = errors.New("listener is not initialized")
 )
 
 // Connection errors
