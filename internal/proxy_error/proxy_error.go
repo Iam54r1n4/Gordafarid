@@ -34,6 +34,8 @@ var (
 	ErrSocks5HandshakeFailed             = errors.New("SOCKS5 handshake failed: protocol mismatch or authentication error")
 	ErrSocks5UnsupportedVersion          = errors.New("unsupported SOCKS5 version")
 	ErrSocks5UnableToReadVersion         = errors.New("unable to read SOCKS5 version")
+	ErrSocks5InvalidNMethodsValue        = errors.New("invalid SOCKS5 nmethods value")
+	ErrSocks5InvalidMethod               = errors.New("invalid SOCKS5 method")
 	ErrSocks5UnableToDiscardNMethods     = errors.New("unable to discard SOCKS5 nmethods")
 	ErrSocks5UnableToSendVersionResponse = errors.New("unable to send SOCKS5 version response(first response)") // First response
 	ErrSocks5UnableToReadRequest         = errors.New("unable to read SOCKS5 request")
