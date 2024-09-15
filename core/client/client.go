@@ -1,3 +1,4 @@
+// Package client provides functionality for the client-side of the proxy.
 package client
 
 import (
@@ -23,6 +24,20 @@ type Client struct {
 }
 
 // NewClient creates and returns a new Client instance.
+//
+// Example:
+//
+//	cfg := &config.Config{
+//		Client: config.ClientConfig{
+//			Address: "localhost:8080",
+//		},
+//		Server: config.ServerConfig{
+//			Address: "example.com:9090",
+//		},
+//		DialTimeout: 30,
+//	}
+//	aead, _ := cipher.NewGCM(block)
+//	client := NewClient(cfg, aead)
 func NewClient(cfg *config.Config, aead cipher.AEAD) *Client {
 	return &Client{
 		cfg:  cfg,
@@ -31,6 +46,13 @@ func NewClient(cfg *config.Config, aead cipher.AEAD) *Client {
 }
 
 // Listen starts the client's TCP listener on the configured address.
+//
+// Example:
+//
+//	err := client.Listen()
+//	if err != nil {
+//		log.Fatal("Failed to start listener:", err)
+//	}
 func (c *Client) Listen() error {
 	var err error
 	c.listener, err = net.Listen("tcp", c.cfg.Client.Address)
@@ -42,7 +64,11 @@ func (c *Client) Listen() error {
 }
 
 // Start begins accepting and handling incoming connections.
+// This method runs indefinitely and should be called after Listen().
 func (c *Client) Start() error {
+	if c.listener == nil {
+		return proxy_error.ErrListenerIsNotInitialized
+	}
 	for {
 		conn, err := c.listener.Accept()
 		if err != nil {
@@ -67,6 +93,13 @@ func (c *Client) Start() error {
 //  2. Set up encrypted stream
 //  3. Start bidirectional data transfer
 //  4. Handle and log any errors
+//
+// This method is typically called as a goroutine for each new connection.
+//
+// Example:
+//
+//	conn, _ := net.Dial("tcp", "localhost:8080")
+//	go client.handleConnection(aead, conn)
 func (c *Client) handleConnection(aead cipher.AEAD, conn net.Conn) {
 	defer conn.Close()
 
