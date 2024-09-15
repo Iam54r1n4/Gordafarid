@@ -16,3 +16,4 @@ password = "00000000000000000000000000000000"
 # In seconds
 dialtimeout = 10
 handshakeTimeout = 10 # Unused in client mode
+socks5ValidationTimeout = 500 # In milliseconds # Unused in server mode
