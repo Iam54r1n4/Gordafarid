@@ -1,3 +1,4 @@
+// Package server provides the main server functionality for the Gordafarid proxy.
 package server
 
 import (
@@ -26,6 +27,19 @@ type Server struct {
 }
 
 // NewServer creates and returns a new Server instance.
+//
+// Example usage:
+//
+//		cfg := &config.Config{
+//			Server: config.ServerConfig{
+//				Address: "127.0.0.1:8080",
+//			},
+//			HandshakeTimeout: 10,
+//			DialTimeout:      5,
+//	        // ... other configuration fields
+//		}
+//		aead, _ := crypto.NewAEAD(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password))
+//		server := NewServer(cfg, aead)
 func NewServer(cfg *config.Config, aead cipher.AEAD) *Server {
 	return &Server{
 		cfg:  cfg,
@@ -34,6 +48,13 @@ func NewServer(cfg *config.Config, aead cipher.AEAD) *Server {
 }
 
 // Listen starts the server listening for incoming connections.
+//
+// Example usage:
+//
+//	err := server.Listen()
+//	if err != nil {
+//		log.Fatal("Failed to start server:", err)
+//	}
 func (s *Server) Listen() error {
 	var err error
 	s.listener, err = net.Listen("tcp", s.cfg.Server.Address)
@@ -45,7 +66,17 @@ func (s *Server) Listen() error {
 }
 
 // Start begins accepting and handling incoming connections.
+//
+// Example usage:
+//
+//	err := server.Start()
+//	if err != nil {
+//		log.Fatal("Server error:", err)
+//	}
 func (s *Server) Start() error {
+	if s.listener == nil {
+		return proxy_error.ErrListenerIsNotInitialized
+	}
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -65,6 +96,10 @@ func (s *Server) Start() error {
 //   - ctx: The context for the connection
 //   - aead: The cipher for encryption/decryption
 //   - c: The client connection
+//
+// Example usage (internal to the Server.Start method):
+//
+//	go s.handleConnection(context.Background(), s.aead, conn)
 func (s *Server) handleConnection(ctx context.Context, aead cipher.AEAD, c net.Conn) {
 	defer c.Close()
 	// Convert incoming TCP connection into cipher stream (Read/Write methods are overridden)
