@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
@@ -28,7 +29,7 @@ const (
 	AtypDomain = 3
 )
 
-func ValidateSocks5(ctx context.Context, c net.Conn) error {
+func ValidateSocks5(timeoutMilliseconds int, c net.Conn) error {
 	// Sample of valid SOCKS5 header in for client proxy:
 	//     VER=5
 	//     NMETHODS=1
@@ -36,7 +37,9 @@ func ValidateSocks5(ctx context.Context, c net.Conn) error {
 	// The only valid value in the client proxy for METHODS is 0x00, which indicates that the client(local application) is using "No Authentication"
 
 	headerBuf := make([]byte, 3)
-	if _, err := utils.ReadWithContext(ctx, c, headerBuf); err != nil {
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMilliseconds)*time.Millisecond)
+	defer cancel()
+	if _, err := utils.ReadWithContext(timeoutCtx, c, headerBuf); err != nil {
 		return errors.Join(proxy_error.ErrSocks5UnableToReadVersion, err)
 	}
 	// Check the request version
