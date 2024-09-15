@@ -24,7 +24,7 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 - #### Traffic Flow
    - Client-Side flow:
       ```plaintext
-      [Local Application] -- SOCKS5 request --> [Client Proxy] --> AEAD encrypt --> Send encrypted SOCKS5 packet over TCP to Server.
+      [Local Application] -- SOCKS5 request --> [Client Proxy] -- Validate SOCKS5 header --> AEAD encrypt --> Send encrypted SOCKS5 packet over TCP to Server.
       ```
 
    - Server-Side flow:
