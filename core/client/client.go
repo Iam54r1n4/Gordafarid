@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Iam54r1n4/Gordafarid/core/net/socks"
 	"github.com/Iam54r1n4/Gordafarid/core/net/stream"
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
@@ -103,6 +104,11 @@ func (c *Client) Start() error {
 func (c *Client) handleConnection(aead cipher.AEAD, conn net.Conn) {
 	defer conn.Close()
 
+	// Validate request
+	if err := socks.ValidateSocks5(c.cfg.Socks5ValidationTimeout, conn); err != nil {
+		logger.Warn(errors.Join(proxy_error.ErrSocks5HeaderValidationFailed, err))
+		return
+	}
 	// Dial remote server (normal tcp)
 	rc, err := net.DialTimeout("tcp", c.cfg.Server.Address, time.Duration(c.cfg.DialTimeout)*time.Second)
 	if err != nil {
