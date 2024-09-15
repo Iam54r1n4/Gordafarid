@@ -30,8 +30,9 @@ type Config struct {
 		Password  string
 	} `toml:"crypto"`
 
-	DialTimeout      int `toml:"dialtimeout"`      // In seconds
-	HandshakeTimeout int `toml:"handshaketimeout"` // In seconds
+	DialTimeout             int `toml:"dialtimeout"`            // In seconds
+	HandshakeTimeout        int `toml:"handshaketimeout"`       // In seconds
+	Socks5ValidationTimeout int `toml:"socksvalidationtimeout"` // In millliseconds
 }
 
 func LoadConfig(path string, mode Mode) (*Config, error) {
@@ -86,5 +87,8 @@ func applyDefaultValues(cfg *Config) {
 	}
 	if cfg.HandshakeTimeout == 0 {
 		cfg.HandshakeTimeout = 10
+	}
+	if cfg.Socks5ValidationTimeout == 0 {
+		cfg.Socks5ValidationTimeout = 500
 	}
 }
