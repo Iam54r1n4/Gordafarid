@@ -47,4 +47,5 @@ var (
 	ErrSocks5UnableToReadDomain          = errors.New("unable to read domain name")
 	ErrSocks5UnableToReadPort            = errors.New("unable to read port")
 	ErrSocks5UnableToSendSuccessResponse = errors.New("unable to send success response(second response)") // Second response
+	ErrSocks5HeaderValidationFailed      = errors.New("SOCKS5 header validation failed")
 )
