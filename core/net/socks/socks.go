@@ -28,6 +28,31 @@ const (
 	AtypDomain = 3
 )
 
+func ValidateSocks5(ctx context.Context, c net.Conn) error {
+	// Sample of valid SOCKS5 header in for client proxy:
+	//     VER=5
+	//     NMETHODS=1
+	//     METHODS=0
+	// The only valid value in the client proxy for METHODS is 0x00, which indicates that the client(local application) is using "No Authentication"
+
+	headerBuf := make([]byte, 3)
+	if _, err := utils.ReadWithContext(ctx, c, headerBuf); err != nil {
+		return errors.Join(proxy_error.ErrSocks5UnableToReadVersion, err)
+	}
+	// Check the request version
+	if headerBuf[0] != version {
+		return errors.Join(proxy_error.ErrSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", headerBuf[0]))
+	}
+	// Check the request nMethods field
+	if headerBuf[1] != 1 {
+		return errors.Join(proxy_error.ErrSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", headerBuf[1]))
+	}
+	if headerBuf[2] != 0 {
+		return errors.Join(proxy_error.ErrSocks5InvalidMethod, fmt.Errorf("sent auth method: %d", headerBuf[2]))
+	}
+	return nil
+}
+
 // HandshakeChan is used to communicate the result of the handshake
 type HandshakeChan struct {
 	TAddr string // Target address
@@ -36,7 +61,49 @@ type HandshakeChan struct {
 }
 
 // Handshake performs the SOCKS5 handshake process
+// https://www.ietf.org/rfc/rfc1928.txt
+
+// Client -> Server: Initial Greeting
+// +----+----------+----------+
+// |VER | NMETHODS | METHODS  |
+// +----+----------+----------+
+// | 1  |    1     | 1 to 255 |
+// +----+----------+----------+
+
+// Server -> Client: Method Selection
+// +----+--------+
+// |VER | METHOD |
+// +----+--------+
+// | 1  |   1    |
+// +----+--------+
+
+// Client -> Server: SOCKS5 Request
+// +----+-----+-------+------+----------+----------+
+// |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
+// +----+-----+-------+------+----------+----------+
+// | 1  |  1  | X'00' |  1   | Variable |    2     |
+// +----+-----+-------+------+----------+----------+
+
+// Server -> Client: SOCKS5 Reply
+// +----+-----+-------+------+----------+----------+
+// |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
+// +----+-----+-------+------+----------+----------+
+// | 1  |  1  | X'00' |  1   | Variable |    2     |
+// +----+-----+-------+------+----------+----------+
+
+// VER: SOCKS version (0x05 for SOCKS5)
+// NMETHODS: Number of authentication methods supported
+// METHODS: Authentication methods supported
+// CMD: Command (0x01 for CONNECT, 0x02 for BIND, 0x03 for UDP ASSOCIATE)
+// RSV: Reserved byte, must be 0x00
+// ATYP: Address type (0x01 for IPv4, 0x03 for Domain, 0x04 for IPv6)
+// DST.ADDR: Destination address
+// DST.PORT: Destination port
+// REP: Reply field (0x00 for success, other values for various errors)
+// BND.ADDR: Server bound address
+// BND.PORT: Server bound port
 func Handshake(ctx context.Context, c net.Conn, hChan chan<- HandshakeChan) {
+
 	defer close(hChan)
 
 	// Read the SOCKS version
