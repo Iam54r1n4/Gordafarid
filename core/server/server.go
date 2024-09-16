@@ -108,7 +108,7 @@ func (s *Server) handleConnection(ctx context.Context, aead cipher.AEAD, c net.C
 	// Perform SOCKS5 handshake
 	logger.Debug("Performing handshake...")
 	hChan := make(chan socks.HandshakeChan)
-	handshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HandshakeTimeout)*time.Second)
+	handshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Timeout.Socks5HandshakeTimeout)*time.Second)
 	defer cancel()
 	go socks.Handshake(handshakeCtx, c, hChan)
 
@@ -126,7 +126,7 @@ func (s *Server) handleConnection(ctx context.Context, aead cipher.AEAD, c net.C
 		// Dial to target server
 		logger.Debug("Handshake done")
 		logger.Debug("Connecting to:", hRes.TAddr)
-		tconn, err := net.DialTimeout("tcp", hRes.TAddr, time.Duration(s.cfg.DialTimeout)*time.Second)
+		tconn, err := net.DialTimeout("tcp", hRes.TAddr, time.Duration(s.cfg.Timeout.DialTimeout)*time.Second)
 		if err != nil {
 			logger.Warn(errors.Join(proxy_error.ErrServerDialFailed, err))
 			return
