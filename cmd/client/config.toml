@@ -13,7 +13,7 @@ address = "127.0.0.1:9090"
 algorithm = "chacha20-poly1305"
 password = "00000000000000000000000000000000"
 
-# In seconds
-dialtimeout = 10
-handshakeTimeout = 10 # Unused in client mode
-socks5ValidationTimeout = 500 # In milliseconds # Unused in server mode
+[timeout]
+dialTimeout = 1000 # In seconds
+socks5HandshakeTimeout = 10000 # In seconds (unused in client mode)
+socks5ValidationTimeout = 10000000000 # In milliseconds (unused in server mode)
