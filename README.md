@@ -37,7 +37,7 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
       ```plaintext
       [Target Server] -- Response Data --> [Server Proxy] --> AEAD encrypt --> Send encrypted data back to Client Proxy --> AEAD decrypt --> Forward response to Local Application
       ```
-###  Components
+###  Codebase Overview
 
 0. The main components of the project are:
    - Client code entry point (cmd/client/main.go)
