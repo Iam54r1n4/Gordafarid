@@ -45,7 +45,7 @@ var (
 // Initialize logger once (singleton)
 func init() {
 	once.Do(func() {
-		instance = NewLogger(INFO, os.Stdout)
+		instance = NewLogger(DEBUG, os.Stdout)
 	})
 }
 
