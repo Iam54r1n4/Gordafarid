@@ -104,13 +104,27 @@ func (c *Client) Start() error {
 func (c *Client) handleConnection(aead cipher.AEAD, conn net.Conn) {
 	defer conn.Close()
 
-	// Validate request
-	if err := socks.ValidateSocks5(c.cfg.Socks5ValidationTimeout, conn); err != nil {
+	// Store a copy of connection data (to avoid consuming the connection on the client side)
+	// This allows us to read and validate the SOCKS5 initial greeting without consuming the connection
+	bufconn := utils.NewBufferedConn(conn)
+	// Start buffering the connection with a maximum size of MaxInitialGreetingSize
+	bufconn.StartBuffering(socks.MaxInitialGreetingSize)
+
+	// Validate the SOCKS5 request
+	// This step ensures that the incoming connection follows the SOCKS5 protocol
+	if err := socks.ValidateSocks5(c.cfg.Timeout.Socks5ValidationTimeout, bufconn); err != nil {
+		// If validation fails, log a warning with the error details and return from the function
 		logger.Warn(errors.Join(proxy_error.ErrSocks5HeaderValidationFailed, err))
 		return
 	}
+
+	// Reset the buffer to its initial state, allowing us to read the data again
+	bufconn.Backtrack()
+	// Stop buffering as we no longer need to preserve the initial data
+	bufconn.StopBuffering()
+
 	// Dial remote server (normal tcp)
-	rc, err := net.DialTimeout("tcp", c.cfg.Server.Address, time.Duration(c.cfg.DialTimeout)*time.Second)
+	rc, err := net.DialTimeout("tcp", c.cfg.Server.Address, time.Duration(c.cfg.Timeout.DialTimeout)*time.Second)
 	if err != nil {
 		logger.Warn(errors.Join(proxy_error.ErrClientToServerDialFailed, err))
 		return
@@ -125,9 +139,9 @@ func (c *Client) handleConnection(aead cipher.AEAD, conn net.Conn) {
 	errChan := make(chan error, 2)
 
 	// Goroutine to copy data from client to remote
-	go utils.DataTransfering(&wg, errChan, rc, conn)
+	go utils.DataTransfering(&wg, errChan, rc, bufconn)
 	// Goroutine to copy data from remote to client
-	go utils.DataTransfering(&wg, errChan, conn, rc)
+	go utils.DataTransfering(&wg, errChan, bufconn, rc)
 
 	// Close the errChan after the dataTransfering goroutines are finished
 	go func() {
