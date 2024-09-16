@@ -30,9 +30,11 @@ type Config struct {
 		Password  string
 	} `toml:"crypto"`
 
-	DialTimeout             int `toml:"dialtimeout"`            // In seconds
-	HandshakeTimeout        int `toml:"handshaketimeout"`       // In seconds
-	Socks5ValidationTimeout int `toml:"socksvalidationtimeout"` // In millliseconds
+	Timeout struct {
+		DialTimeout             int `toml:"dialTimeout"`             // In seconds
+		Socks5HandshakeTimeout  int `toml:"socks5HandshakeTimeout"`  // In seconds
+		Socks5ValidationTimeout int `toml:"socks5ValidationTimeout"` // In millliseconds
+	} `toml:"timeout"`
 }
 
 func LoadConfig(path string, mode Mode) (*Config, error) {
@@ -40,6 +42,7 @@ func LoadConfig(path string, mode Mode) (*Config, error) {
 		path = DefaultConfigFilePath
 	}
 	var config Config
+
 	if _, err := toml.DecodeFile(path, &config); err != nil {
 		return nil, err
 	}
@@ -82,13 +85,13 @@ func validateCryptoFields(cfg *Config) error {
 	return nil
 }
 func applyDefaultValues(cfg *Config) {
-	if cfg.DialTimeout == 0 {
-		cfg.DialTimeout = 10
+	if cfg.Timeout.DialTimeout == 0 {
+		cfg.Timeout.DialTimeout = 10
 	}
-	if cfg.HandshakeTimeout == 0 {
-		cfg.HandshakeTimeout = 10
+	if cfg.Timeout.Socks5HandshakeTimeout == 0 {
+		cfg.Timeout.Socks5HandshakeTimeout = 10
 	}
-	if cfg.Socks5ValidationTimeout == 0 {
-		cfg.Socks5ValidationTimeout = 500
+	if cfg.Timeout.Socks5ValidationTimeout == 0 {
+		cfg.Timeout.Socks5ValidationTimeout = 500
 	}
 }
