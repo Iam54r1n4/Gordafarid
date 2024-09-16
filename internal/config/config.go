@@ -18,23 +18,32 @@ const (
 	ModeServer
 )
 
-type Config struct {
-	Client struct {
-		Address string
-	} `toml:"client"`
-	Server struct {
-		Address string
-	} `toml:"server"`
-	Crypto struct {
-		Algorithm string
-		Password  string
-	} `toml:"crypto"`
+type cryptoConfig struct {
+	Algorithm string `toml:"algorithm"`
+	Password  string `toml:"password"`
+}
+type clientConfig struct {
+	Address string `toml:"address"`
+}
+type serverConfig struct {
+	Address string `toml:"address"`
+}
+type timeoutConfig struct {
+	DialTimeout             int `toml:"dialTimeout"`             // In seconds
+	Socks5HandshakeTimeout  int `toml:"socks5HandshakeTimeout"`  // In seconds
+	Socks5ValidationTimeout int `toml:"socks5ValidationTimeout"` // In millliseconds
+}
 
-	Timeout struct {
-		DialTimeout             int `toml:"dialTimeout"`             // In seconds
-		Socks5HandshakeTimeout  int `toml:"socks5HandshakeTimeout"`  // In seconds
-		Socks5ValidationTimeout int `toml:"socks5ValidationTimeout"` // In millliseconds
-	} `toml:"timeout"`
+type credentialsConfig map[string]string
+
+type Config struct {
+	Client clientConfig `toml:"client"`
+	Server serverConfig `toml:"server"`
+	Crypto cryptoConfig `toml:"crypto"`
+
+	Timeout timeoutConfig `toml:"timeout"`
+
+	Credentials credentialsConfig `toml:"credentials"`
 }
 
 func LoadConfig(path string, mode Mode) (*Config, error) {
