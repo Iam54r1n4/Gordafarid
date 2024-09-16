@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/internal/config"
+	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
@@ -116,7 +118,7 @@ func ValidateSocks5(timeoutMilliseconds int, c net.Conn) error {
 // PLEN: Password length
 // PASSWD: Password
 // STATUS: Authentication status (0x00 for success, 0x01 for failure)
-func Handshake(ctx context.Context, c net.Conn, hChan chan<- HandshakeChan) {
+func Handshake(ctx context.Context, cfg *config.Config, c net.Conn, hChan chan<- HandshakeChan) {
 	defer close(hChan)
 
 	// Step 1: Handle initial greeting and method selection
@@ -134,7 +136,7 @@ func Handshake(ctx context.Context, c net.Conn, hChan chan<- HandshakeChan) {
 
 	// Step 3: Handle authentication if required
 	if method == userPassAuthMethod {
-		if err := handleUserPassAuthMethodNegotiation(ctx, c); err != nil {
+		if err := handleUserPassAuthMethodNegotiation(ctx, cfg, c); err != nil {
 			hChan <- HandshakeChan{Err: err}
 			return
 		}
@@ -225,7 +227,7 @@ func selectPreferredSocks5AuthMethod(methods []byte) (byte, error) {
 
 // handleUserPassAuthMethodNegotiation handles the username/password authentication
 // This follows the username/password authentication subnegotiation defined in RFC 1929
-func handleUserPassAuthMethodNegotiation(ctx context.Context, c net.Conn) error {
+func handleUserPassAuthMethodNegotiation(ctx context.Context, cfg *config.Config, c net.Conn) error {
 	// Read authentication version
 	buf := make([]byte, 1)
 	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
@@ -255,18 +257,20 @@ func handleUserPassAuthMethodNegotiation(ctx context.Context, c net.Conn) error 
 		return errors.Join(proxy_error.ErrSocks5UnableToReadUserPassAuthPassword, err)
 	}
 
-	authOk := true
+	logger.Debug(fmt.Sprintf("SOCKS5 authentication: username: %s, password: %s", string(uname), string(pass)))
 
-	// TODO: Implement actual authentication logic here
-
-	if !authOk {
+	// Verify the credentials
+	authErr := utils.Socks5Auth(cfg, uname, pass)
+	// Send failed response if auth failed
+	if authErr != nil {
 		if err := sendTwoBytesResponse(c, userPassAuthVersion, userPassAuthFailed); err != nil {
 			return errors.Join(proxy_error.ErrSocks5UnableToSendUserPassAuthFailedResponse, err)
 		}
-	} else {
-		if err := sendTwoBytesResponse(c, userPassAuthVersion, userPassAuthSuccess); err != nil {
-			return errors.Join(proxy_error.ErrSocks5UnableToSendUserPassAuthSuccessResponse, err)
-		}
+		return errors.Join(proxy_error.ErrSocks5AuthenticationFailed, fmt.Errorf("username: %s, password: %s", string(uname), string(pass)))
+	}
+	// Send success response
+	if err := sendTwoBytesResponse(c, userPassAuthVersion, userPassAuthSuccess); err != nil {
+		return errors.Join(proxy_error.ErrSocks5UnableToSendUserPassAuthSuccessResponse, err)
 	}
 
 	return nil
