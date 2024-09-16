@@ -28,6 +28,8 @@ var (
 	ErrTransferError       = errors.New("data transfer failed between client and server")
 )
 
+var ErrBufferedConnBufferIsEmpty = errors.New("BufferedConn internal buffer is empty")
+
 // Socks5 errors
 var (
 	// General errors

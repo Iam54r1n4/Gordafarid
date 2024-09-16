@@ -119,7 +119,9 @@ func (c *Client) handleConnection(aead cipher.AEAD, conn net.Conn) {
 	}
 
 	// Reset the buffer to its initial state, allowing us to read the data again
-	bufconn.Backtrack()
+	if err := bufconn.Backtrack(); err != nil {
+		logger.Warn(err)
+	}
 	// Stop buffering as we no longer need to preserve the initial data
 	bufconn.StopBuffering()
 
