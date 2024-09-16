@@ -82,7 +82,8 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 
 
 ## Security Considerations
-- Basic authentication mechanism implemented using a pre-shared key
+- Basic authentication mechanism implemented using a pre-shared key shared between the client and the server
+- SOCKS5 Username/Password authentication implemented on the client side
 
 ## Usage
 0. Clone the repository
