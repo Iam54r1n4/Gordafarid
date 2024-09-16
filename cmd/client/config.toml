@@ -17,3 +17,9 @@ password = "00000000000000000000000000000000"
 dialTimeout = 1000 # In seconds
 socks5HandshakeTimeout = 10000 # In seconds (unused in client mode)
 socks5ValidationTimeout = 10000000000 # In milliseconds (unused in server mode)
+
+
+[credentials] # username/password for SOCKS5 authentication (unused in client mode)
+user1 = "user1p"
+user2 = "user2p"
+user3 = "user3p"
