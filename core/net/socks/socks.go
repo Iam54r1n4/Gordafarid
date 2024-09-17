@@ -122,7 +122,7 @@ func Handshake(ctx context.Context, cfg *config.Config, c net.Conn, hChan chan<-
 	defer close(hChan)
 
 	// Step 1: Handle initial greeting and method selection
-	method, err := handleInitialGreeting(ctx, c)
+	method, err := handleInitialGreeting(ctx, cfg, c)
 	if err != nil {
 		hChan <- HandshakeChan{Err: err}
 		return
@@ -161,7 +161,7 @@ func Handshake(ctx context.Context, cfg *config.Config, c net.Conn, hChan chan<-
 
 // handleInitialGreeting processes the initial SOCKS5 greeting from the client
 // It reads the client's supported authentication methods and selects one
-func handleInitialGreeting(ctx context.Context, c net.Conn) (byte, error) {
+func handleInitialGreeting(ctx context.Context, cfg *config.Config, c net.Conn) (byte, error) {
 	// Read SOCKS version and number of methods
 	buf := make([]byte, 2)
 	if _, err := utils.ReadWithContext(ctx, c, buf); err != nil {
@@ -186,7 +186,15 @@ func handleInitialGreeting(ctx context.Context, c net.Conn) (byte, error) {
 	}
 
 	// Select preferred authentication method
-	return selectPreferredSocks5AuthMethod(methods)
+	bestMethod, err := selectPreferredSocks5AuthMethod(methods)
+	if err != nil {
+		return noAcceptableMethod, err
+	}
+	// If username/password authentication is required and not supported, return an error
+	if len(cfg.Credentials) > 0 && bestMethod != userPassAuthMethod {
+		return noAcceptableMethod, errors.Join(proxy_error.ErrSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", nMethods))
+	}
+	return bestMethod, nil
 }
 
 // selectPreferredSocks5AuthMethod selects the preferred authentication method from the provided list.
