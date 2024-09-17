@@ -4,7 +4,6 @@ package crypto
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"strings"
 
 	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 	"golang.org/x/crypto/chacha20poly1305"
@@ -27,20 +26,6 @@ var supportedAEADs = map[string]aeadMeta{
 	"aes-128-gcm":       {KeySize: 16, Constructor: newAESGCM},
 }
 
-// IsCryptoSupported checks if the given algorithm and password are supported.
-// It returns an error if the algorithm is not supported or if the password length is invalid.
-func IsCryptoSupported(algoName, password string) error {
-	algoName = strings.ToLower(algoName)
-	aeadMeta, ok := supportedAEADs[algoName]
-	if !ok {
-		return proxy_error.ErrCryptoAlgorithmUnsupported
-	}
-	if len(password) != aeadMeta.KeySize {
-		return proxy_error.ErrCryptoPasswordInvalid
-	}
-	return nil
-}
-
 // newAESGCM creates a new AES-GCM AEAD cipher with the given key.
 func newAESGCM(key []byte) (cipher.AEAD, error) {
 	block, err := aes.NewCipher(key)
@@ -48,6 +33,28 @@ func newAESGCM(key []byte) (cipher.AEAD, error) {
 		return nil, err
 	}
 	return cipher.NewGCM(block)
+}
+
+// IsCryptoSupported checks if the given algorithm and password are supported.
+// It returns an error if the algorithm is not supported or if the password length is invalid.
+func IsCryptoSupported(algoName, password string) error {
+	aeadMeta, ok := supportedAEADs[algoName]
+	if !ok {
+		return proxy_error.ErrCryptoAlgorithmUnsupported
+	}
+	if len(password) != aeadMeta.KeySize {
+		return proxy_error.ErrAccountPasswordInvalid
+	}
+	return nil
+}
+
+// GetAlgorithmKeySize returns the key size in bytes for the given algorithm name.
+func GetAlgorithmKeySize(algoName string) (int, error) {
+	if err := IsCryptoSupported(algoName, ""); err != nil {
+		return 0, err
+	}
+	aeadMeta := supportedAEADs[algoName]
+	return aeadMeta.KeySize, nil
 }
 
 // NewAEAD creates a new AEAD cipher based on the given algorithm name and key.
