@@ -60,7 +60,8 @@ func (sc *ServerConfig) validate() error {
 			return fmt.Errorf("element at index %d has empty password in credentials", i)
 		}
 		if err := crypto.IsCryptoSupported(sc.CryptoAlgorithm, cred.Password); err != nil {
-			return fmt.Errorf("element at index %d has invalid password in credentials, the required length is %d", i, crypto.GetAlgorithmKeySize(sc.CryptoAlgorithm))
+			keyLength, _ := crypto.GetAlgorithmKeySize(sc.CryptoAlgorithm)
+			return fmt.Errorf("element at index %d has invalid password in credentials, the required length is %d", i, keyLength)
 		}
 	}
 	return nil
