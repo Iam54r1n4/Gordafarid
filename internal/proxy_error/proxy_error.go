@@ -5,11 +5,11 @@ import "errors"
 // Config errors
 var (
 	ErrInvalidConfigFile          = errors.New("invalid config file")
-	ErrCryptoPasswordInvalid      = errors.New("crypto.password length is invalid")
-	ErrCryptoPasswordEmpty        = errors.New("crypto.password is empty")
 	ErrCryptoAlgorithmEmpty       = errors.New("crypto.algorithm is empty")
 	ErrCryptoAlgorithmUnsupported = errors.New("crypto.algorithm is not supported")
 	ErrCryptoInitFailed           = errors.New("the crypto initialization failed")
+	ErrAccountPasswordInvalid     = errors.New("account.password length is invalid, must sync to selected crypto algorithm key length")
+	ErrEmptyServerCredentials     = errors.New("server.credentials is empty")
 )
 
 // Listening errors
@@ -32,15 +32,15 @@ var ErrBufferedConnBufferIsEmpty = errors.New("the BufferedConn internal buffer 
 
 // Socks5 errors
 var (
+	// General errors
+	ErrSocks5HandshakeTimeout    = errors.New("the SOCKS5 handshake timed out")
+	ErrSocks5HandshakeFailed     = errors.New("the SOCKS5 handshake failed: protocol mismatch or authentication error")
+	ErrSocks5UnableToReadRequest = errors.New("unable to read the SOCKS5 request")
+
 	// Auth
 	ErrSocks5AuthenticationFailed  = errors.New("the SOCkS5 authentication failed")
 	ErrSocks5AuthIncorrectUsername = errors.New("username is incorrect")
 	ErrSocks5AuthIncorrectPassword = errors.New("password is incorrect")
-	// General errors
-	ErrSocks5HandshakeTimeout       = errors.New("the SOCKS5 handshake timed out")
-	ErrSocks5HandshakeFailed        = errors.New("the SOCKS5 handshake failed: protocol mismatch or authentication error")
-	ErrSocks5HeaderValidationFailed = errors.New("the SOCKS5 header validation failed")
-	ErrSocks5UnableToReadRequest    = errors.New("unable to read the SOCKS5 request")
 
 	// Validation errors
 	ErrSocks5ClientSideInitialGreetingFailed = errors.New("client side the SOCKS5 initial greeting failed")
@@ -70,6 +70,7 @@ var (
 	// Authentication errors
 	ErrSocks5InvalidNMethodsValue = errors.New("invalid SOCKS5 nmethods value")
 	ErrSocks5InvalidMethod        = errors.New("invalid SOCKS5 method")
+	ErrSocks5NoAcceptableMethod   = errors.New("no acceptable method")
 
 	// Username/Password authentication mehtod negotiation errors
 	ErrSocks5UnableToReadUserPassAuthVersion        = errors.New("unable to read the SOCKS5 username/password authenticaation version")
@@ -78,4 +79,23 @@ var (
 	ErrSocks5UnableToReadUserPassAuthUsername       = errors.New("unable to read the SOCKS5 username/password authentication username")
 	ErrSocks5UnableToReadUserPassAuthPasswordLength = errors.New("unable to read the SOCKS5 username/password authentication password length")
 	ErrSocks5UnableToReadUserPassAuthPassword       = errors.New("unable to read the SOCKS5 username/password authentication password")
+)
+
+// Gordafarid errors
+var (
+	// General errors
+	ErrGordafaridHandshakeTimeout    = errors.New("the Gordafarid handshake timed out")
+	ErrGordafaridHandshakeFailed     = errors.New("the Gordafarid handshake failed: protocol mismatch or authentication error")
+	ErrGordafaridUnableToReadRequest = errors.New("unable to read the Gordafarid request")
+	// Version errors
+	ErrGordafaridUnableToReadVersion = errors.New("unable to read the Gordafarid version")
+	ErrGordafaridUnsupportedVersion  = errors.New("unsupported the Gordafarid version")
+
+	// Account hash errors
+	ErrGordafaridUnableToReadAccountHash = errors.New("unable to read the Gordafarid account hash")
+	ErrGordafaridInvalidAccountHash      = errors.New("invalid Gordafarid account hash")
+	// Cmd errors
+	ErrGordafaridUnableToReadCmd  = errors.New("unable to read the Gordafarid cmd")
+	ErrGordafaridInvalidCmd       = errors.New("invalid Gordafarid cmd")
+	ErrGordafaridUnableToReadAytp = errors.New("unable to read the Gordafarid address type")
 )
