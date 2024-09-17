@@ -2,7 +2,11 @@ package utils
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net"
+
+	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 // ReadWithContext reads data from a net.Conn with context support.
@@ -40,4 +44,44 @@ func ReadWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
 	case v := <-readChan:
 		return v.n, v.err
 	}
+}
+
+// ReadAddress reads the address based on the address type
+func ReadAddress(ctx context.Context, conn net.Conn, atyp byte) ([]byte, error) {
+	var buf []byte
+
+	switch atyp {
+	case AtypIPv4:
+		buf = make([]byte, net.IPv4len)
+		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
+			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadIpv4, err)
+		}
+	case AtypIPv6:
+		buf = make([]byte, net.IPv6len)
+		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
+			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadIpv6, err)
+		}
+	case AtypDomain:
+		buf = make([]byte, 1)
+		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
+			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
+		}
+		domainLen := buf[0]
+		buf = make([]byte, domainLen)
+		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
+			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
+		}
+	default:
+		return nil, errors.Join(proxy_error.ErrSocks5UnsupportedAddressType, fmt.Errorf("sent address type: %d", atyp))
+	}
+	return buf, nil
+}
+
+// ReadPort reads the port number from the connection
+func ReadPort(ctx context.Context, conn net.Conn) ([2]byte, error) {
+	var port [2]byte
+	if _, err := ReadWithContext(ctx, conn, port[:]); err != nil {
+		return [2]byte{}, errors.Join(proxy_error.ErrSocks5UnableToReadPort, err)
+	}
+	return port, nil
 }
