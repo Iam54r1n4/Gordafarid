@@ -1,5 +1,7 @@
 package socks
 
+// This package doesn't implement the client handshake because it is not needed for the current implementation.
+
 // func (c *Conn) clientHandshake(ctx context.Context) error {
 // 	if c.GetHandshakeComplete() {
 // 		return nil
