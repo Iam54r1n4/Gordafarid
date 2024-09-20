@@ -39,23 +39,24 @@ func (c *Conn) selectPreferredSocks5AuthMethod() (byte, error) {
 
 	// Iterate through the client's supported methods
 	for _, method := range c.greeting.methods {
-		if noAuth && userPassAuth {
-			break
-		}
+
 		if method == noAuthMethod {
 			noAuth = true
 		} else if method == userPassAuthMethod {
 			userPassAuth = true
 		}
+		if noAuth && userPassAuth {
+			break
+		}
 	}
 
-	// Prefer username/password authentication if available
-	if userPassAuth {
+	// Prefer username/password authentication if available and required
+	if c.serverConfig.credentials != nil && userPassAuth {
 		return userPassAuthMethod, nil
 	}
 
-	// Fall back to no authentication if supported
-	if noAuth {
+	// Fall back to no authentication if supported and no credentials are required
+	if c.serverConfig.credentials == nil && noAuth {
 		return noAuthMethod, nil
 	}
 
@@ -104,24 +105,23 @@ func (c *Conn) serverParseUserPassAuthMethodHeaders(ctx context.Context) error {
 // It parses the authentication headers, attempts to authenticate, and sends the appropriate response.
 // Returns an error if any step in the process fails.
 func (c *Conn) serverHandleUserPassAuthMethodNegotiation(ctx context.Context) error {
-	var err error
 
 	// Parse the authentication headers
-	if err = c.serverParseUserPassAuthMethodHeaders(ctx); err != nil {
+	if err := c.serverParseUserPassAuthMethodHeaders(ctx); err != nil {
 		return err
 	}
 
 	// Attempt to authenticate
-	if err = c.authenticate(); err != nil {
+	if err := c.authenticate(); err != nil {
 		// Send failed response if auth failed
-		if err := c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthFailed); err != nil {
-			return errors.Join(errUnableToSendUserPassAuthFailedResponse, err)
+		if sendErr := c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthFailed); sendErr != nil {
+			return errors.Join(errUnableToSendUserPassAuthFailedResponse, sendErr, err)
 		}
-		return errors.Join(errAuthenticationFailed, fmt.Errorf("username: %s, password: %s", string(c.userPassAuth.username), string(c.userPassAuth.password)))
+		return errors.Join(errAuthenticationFailed, fmt.Errorf("username: %s", string(c.userPassAuth.username)))
 	}
 
 	// Send success response
-	if err = c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthSuccess); err != nil {
+	if err := c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthSuccess); err != nil {
 		return errors.Join(errUnableToSendUserPassAuthSuccessResponse, err)
 	}
 
