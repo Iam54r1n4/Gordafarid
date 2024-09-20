@@ -1,12 +1,13 @@
 package utils
 
 import (
+	"errors"
 	"net"
 	"sync"
 	"time"
-
-	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
+
+var errBufferedConnBufferIsEmpty = errors.New("the BufferedConn internal buffer is empty")
 
 // defaultBufferedConnConnBufferSize is the default buffer size for BufferedConnConn.
 const (
@@ -79,7 +80,7 @@ func (rr *bufferedConn) Backtrack() error {
 		panic("buffering is not enabled")
 	}
 	if len(rr.buffer) < 1 {
-		return proxy_error.ErrBufferedConnBufferIsEmpty
+		return errBufferedConnBufferIsEmpty
 	}
 	rr.backtrack = true
 	return nil
