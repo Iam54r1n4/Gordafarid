@@ -1,3 +1,4 @@
+// Package socks implements the SOCKS5 protocol for proxying TCP connections.
 package socks
 
 import (
@@ -10,6 +11,12 @@ import (
 
 // serverHandshake performs the SOCKS5 handshake process on the server side.
 // It checks if the handshake is already complete, and if not, it handles the initial greeting and request.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during the handshake process.
 func (c *Conn) serverHandshake(ctx context.Context) error {
 	if c.GetHandshakeComplete() {
 		return nil
@@ -28,6 +35,12 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 
 // serverParseInitialGreetingHeaders reads and parses the initial SOCKS5 greeting headers from the client.
 // It verifies the SOCKS version, reads the number of authentication methods, and the methods themselves.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during parsing of the initial greeting headers.
 func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 	// Read SOCKS version and number of methods
 	buf := make([]byte, 2)
@@ -64,6 +77,12 @@ func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 // serverHandleInitialGreeting processes the initial SOCKS5 greeting from the client.
 // It reads the client's supported authentication methods, selects the best method,
 // and sends the method selection response back to the client.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during handling of the initial greeting.
 func (c *Conn) serverHandleInitialGreeting(ctx context.Context) error {
 	var err error
 	if err = c.serverParseInitialGreetingHeaders(ctx); err != nil {
@@ -91,6 +110,12 @@ func (c *Conn) serverHandleInitialGreeting(ctx context.Context) error {
 
 // serverParseRequestHeaders reads and parses the SOCKS5 request headers from the client.
 // It verifies the SOCKS version, command, and reads the destination address and port.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during parsing of the request headers.
 func (c *Conn) serverParseRequestHeaders(ctx context.Context) error {
 	// Read version, command, and reserved byte
 	buf := make([]byte, 3)
@@ -125,6 +150,12 @@ func (c *Conn) serverParseRequestHeaders(ctx context.Context) error {
 
 // serverSendReplyResponse sends the SOCKS5 reply response back to the client.
 // It sets the reply fields and writes the response to the connection.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during sending of the reply response.
 func (c *Conn) serverSendReplyResponse(ctx context.Context) error {
 	c.reply.version = socks5Version
 	c.reply.rep = 0
@@ -140,6 +171,12 @@ func (c *Conn) serverSendReplyResponse(ctx context.Context) error {
 
 // serverHandleRequest processes the SOCKS5 request from the client.
 // It parses the request headers and sends the reply response.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//
+// Returns:
+//   - error: Any error encountered during handling of the request.
 func (c *Conn) serverHandleRequest(ctx context.Context) error {
 	var err error
 	if err = c.serverParseRequestHeaders(ctx); err != nil {
@@ -153,6 +190,14 @@ func (c *Conn) serverHandleRequest(ctx context.Context) error {
 
 // serverSendTwoBytesResponse sends a two-byte response to the client.
 // It is used for sending method selection and other simple responses.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//   - version: The SOCKS version byte to send.
+//   - method: The method byte to send.
+//
+// Returns:
+//   - error: Any error encountered during sending of the response.
 func (c *Conn) serverSendTwoBytesResponse(ctx context.Context, version, method byte) error {
 	if _, err := utils.WriteWithContext(ctx, c.Conn, []byte{version, method}); err != nil {
 		return err
@@ -162,6 +207,14 @@ func (c *Conn) serverSendTwoBytesResponse(ctx context.Context, version, method b
 
 // serverSendMethodSelection sends the method selection response to the client.
 // It uses serverSendTwoBytesResponse to send the SOCKS version and selected authentication method.
+//
+// Parameters:
+//   - ctx: The context for handling timeouts and cancellations.
+//   - version: The SOCKS version byte to send.
+//   - method: The selected authentication method byte to send.
+//
+// Returns:
+//   - error: Any error encountered during sending of the method selection response.
 func (c *Conn) serverSendMethodSelection(ctx context.Context, version, method byte) error {
 	if err := c.serverSendTwoBytesResponse(ctx, version, method); err != nil {
 		return errors.Join(errSocks5UnableToSendMethodSelectionResponse, err)
