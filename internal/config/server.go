@@ -18,7 +18,7 @@ type serverAddr struct {
 type ServerConfig struct {
 	Server          serverAddr    `toml:"server"`          // Server address configuration
 	CryptoAlgorithm string        `toml:"cryptoAlgorithm"` // Cryptographic algorithm to be used
-	Credentials     []Account     `toml:"credentials"`     // List of user accounts
+	Credentials     []Account     `toml:"credentials"`     // List of user accounts for the Gordafarid authentication
 	Timeout         timeoutConfig `toml:"timeout"`         // Timeout settings
 }
 
@@ -56,15 +56,16 @@ func (sc *ServerConfig) validate() error {
 	if len(sc.CryptoAlgorithm) < 1 {
 		missingFields = append(missingFields, "cryptoAlgorithm")
 	}
-	if len(sc.Credentials) < 1 {
-		missingFields = append(missingFields, "credentials")
-	}
 
 	// If any required fields are missing, return an error
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing fields: %s", strings.Join(missingFields, ", "))
 	}
 
+	// Validate the server credentials
+	if len(sc.Credentials) < 1 {
+		return errEmptyServerCredentials
+	}
 	// Validate each credential
 	for i, cred := range sc.Credentials {
 		if len(cred.Username) < 1 {
