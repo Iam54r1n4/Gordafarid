@@ -4,33 +4,24 @@ package main
 import (
 	"errors"
 
-	"github.com/Iam54r1n4/Gordafarid/core/crypto"
-	"github.com/Iam54r1n4/Gordafarid/core/server"
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
+	"github.com/Iam54r1n4/Gordafarid/internal/flags" // Check its init function
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
-	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
+	"github.com/Iam54r1n4/Gordafarid/internal/server"
+	"github.com/Iam54r1n4/Gordafarid/internal/shared_error"
 )
 
 // main is the entry point of the application.
-// It loads configs, starts the server, and handles incoming connections.
+// It loads configs(config package init function), starts the server, and handles incoming connections.
 func main() {
-	// Load the configuration from the specified file
-	cfg, err := config.LoadConfig(config.DefaultConfigFilePath, config.ModeServer)
-	if err != nil {
-		logger.Fatal(errors.Join(proxy_error.ErrInvalidConfigFile, err))
-	}
 
-	// Initialize the encryption algorithm
-	aead, err := crypto.NewAEAD(cfg.Crypto.Algorithm, []byte(cfg.Crypto.Password))
-	if err != nil {
-		logger.Fatal(errors.Join(proxy_error.ErrCryptoInitFailed, err))
-	}
+	cfg := config.GetServerConfig(flags.CfgPathFlag)
 
-	server := server.NewServer(cfg, aead)
-	if err = server.Listen(); err != nil {
-		logger.Fatal(errors.Join(proxy_error.ErrClientListenFailed, err))
+	server := server.NewServer(cfg)
+
+	if err := server.Listen(); err != nil {
+		logger.Fatal(errors.Join(shared_error.ErrClientListenFailed, err))
 	}
 
 	server.Start()
-
 }
