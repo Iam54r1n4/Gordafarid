@@ -146,16 +146,6 @@ func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
 		logger.Warn(errors.Join(shared_error.ErrClientToServerDialFailed, err))
 		return
 	}
-
-	// x := make([]byte, 15)
-	// grc.Read(x)
-	// logger.Warn("the x received in bytes:", x)
-	// logger.Warn("the x received in string:", string(x))
-
-	// y := []byte("i will fuck you")
-	// grc.Write(y)
-	// logger.Warn("y written")
-
 	// Initialize bidirectional data transferring
 	wg := sync.WaitGroup{}
 	wg.Add(2)
