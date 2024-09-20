@@ -5,8 +5,6 @@ import (
 	"io"
 	"net"
 	"sync"
-
-	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
 )
 
 // DataTransfering transfers data between two network connections.
@@ -20,11 +18,11 @@ import (
 //
 // The function will decrement the WaitGroup counter when it completes.
 // If an error occurs during the data transfer, it will be sent to the errChan
-// wrapped with the proxy_error.ErrTransferError.
+// wrapped with the errTransfererror.
 func DataTransfering(wg *sync.WaitGroup, errChan chan error, left net.Conn, right net.Conn) {
 	defer wg.Done()
 	if _, err := io.Copy(left, right); err != nil {
-		errChan <- errors.Join(proxy_error.ErrTransferError, err)
+		errChan <- errors.Join(errTransfererror, err)
 		return
 	}
 }
