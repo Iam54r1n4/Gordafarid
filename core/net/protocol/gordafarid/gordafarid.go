@@ -178,7 +178,7 @@ func (d *Dialer) dial(ctx context.Context, dialConnConfig *DialConnConfig, tcpCo
 	}
 
 	if err := conn.HandshakeContext(ctx); err != nil {
-		return nil, errors.Join(errGordafaridHandshakeFailed, err)
+		return nil, errors.Join(errHandshakeFailed, err)
 	}
 
 	return conn, nil

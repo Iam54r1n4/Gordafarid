@@ -118,12 +118,12 @@ func (c *Conn) clientHandleGreetingResponse(ctx context.Context) error {
 
 	// Check if the protocol version matches
 	if buf[0] != gordafaridVersion {
-		return errGordafaridUnsupportedVersion
+		return errUnsupportedVersion
 	}
 
 	// Check if the greeting was successful
 	if buf[1] == greetingFailed {
-		return errGordafaridGreetingFailed
+		return errGreetingFailed
 	}
 
 	return nil
@@ -136,7 +136,7 @@ func (c *Conn) clientHandleReplyResponse(ctx context.Context) error {
 		return err
 	}
 	if buf[0] != gordafaridVersion {
-		return errGordafaridUnsupportedVersion
+		return errUnsupportedVersion
 	}
 	c.reply.Version = buf[0]
 
@@ -144,7 +144,7 @@ func (c *Conn) clientHandleReplyResponse(ctx context.Context) error {
 		return err
 	}
 	if buf[0] != replySuccess {
-		return errGordafaridReplyFailed
+		return errReplyFailed
 	}
 
 	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {

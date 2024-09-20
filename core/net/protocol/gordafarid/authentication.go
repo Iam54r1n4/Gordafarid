@@ -19,7 +19,7 @@ func (c *Conn) handleAuthentication() error {
 		// Return an authentication failure error.
 		// This error should be handled by the caller to take appropriate action,
 		// such as closing the connection or requesting re-authentication.
-		return errGordafaridAuthFailed
+		return errAuthFailed
 	}
 
 	// If the credentials are valid, create an account object for the authenticated client.

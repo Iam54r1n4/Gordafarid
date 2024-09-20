@@ -74,20 +74,20 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	buf := make([]byte, 1)
 	var err error
 	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errGordafaridUnableToReadVersion, err)
+		return errors.Join(errUnableToReadVersion, err)
 	}
 	if buf[0] != gordafaridVersion {
-		return errGordafaridUnsupportedVersion
+		return errUnsupportedVersion
 	}
 	c.greeting.Version = buf[0]
 
 	// Step 2: Read and validate the command
 	buf = make([]byte, 1)
 	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errGordafaridUnableToReadCmd, err)
+		return errors.Join(errUnableToReadCmd, err)
 	}
 	if buf[0] != protocol.CmdConnect {
-		return errGordafaridUnsupportedCmd
+		return errUnsupportedCmd
 	}
 	c.greeting.Cmd = buf[0]
 
@@ -95,10 +95,10 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	buf = make([]byte, HashSize)
 	n, err := utils.ReadWithContext(ctx, c.Conn, buf)
 	if err != nil {
-		return errors.Join(errGordafaridUnableToReadAccountHash, err)
+		return errors.Join(errUnableToReadAccountHash, err)
 	}
 	if n < HashSize {
-		return errGordafaridInvalidAccountHash
+		return errInvalidAccountHash
 	}
 	copy(c.greeting.hash[:], buf)
 

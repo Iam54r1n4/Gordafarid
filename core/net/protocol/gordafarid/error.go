@@ -4,29 +4,28 @@ import "errors"
 
 var (
 	// General errors
-	errGordafaridHandshakeFailed     = errors.New("the Gordafarid handshake failed: protocol mismatch or authentication error")
-	errGordafaridUnableToReadRequest = errors.New("unable to read the Gordafarid request")
+	errHandshakeFailed = errors.New("the Gordafarid handshake failed: protocol mismatch or authentication error")
 
 	// Address type error
 	errUnableToReadAddressType = errors.New("unable to read the Gordafarid address type")
 
 	// Version errors
-	errGordafaridUnableToReadVersion = errors.New("unable to read the Gordafarid version")
-	errGordafaridUnsupportedVersion  = errors.New("unsupported the Gordafarid version")
+	errUnableToReadVersion = errors.New("unable to read the Gordafarid version")
+	errUnsupportedVersion  = errors.New("unsupported the Gordafarid version")
 
 	// Account hash errors
-	errGordafaridUnableToReadAccountHash = errors.New("unable to read the Gordafarid account hash")
-	errGordafaridInvalidAccountHash      = errors.New("invalid Gordafarid account hash")
+	errUnableToReadAccountHash = errors.New("unable to read the Gordafarid account hash")
+	errInvalidAccountHash      = errors.New("invalid Gordafarid account hash")
 
 	// Greeting errors
-	errGordafaridGreetingFailed = errors.New("the Gordafarid greeting failed")
+	errGreetingFailed = errors.New("the Gordafarid greeting failed")
 
 	// Cmd errors
-	errGordafaridUnableToReadCmd = errors.New("unable to read the Gordafarid cmd")
-	errGordafaridUnsupportedCmd  = errors.New("unsupported Gordafarid cmd")
+	errUnableToReadCmd = errors.New("unable to read the Gordafarid cmd")
+	errUnsupportedCmd  = errors.New("unsupported Gordafarid cmd")
 
 	// Authentication errors
-	errGordafaridAuthFailed = errors.New("the Gordafarid authentication failed")
+	errAuthFailed = errors.New("the Gordafarid authentication failed")
 
-	errGordafaridReplyFailed = errors.New("the reply response from the server indicates failure")
+	errReplyFailed = errors.New("the reply response from the server indicates failure")
 )
