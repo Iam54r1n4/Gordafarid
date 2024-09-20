@@ -100,69 +100,97 @@ func (s *Server) Start() error {
 }
 
 // handleConnection manages a single client connection.
-// It performs the SOCKS5 handshake, establishes a connection to the target server,
+// It performs the Gordafarid handshake, establishes a connection to the target server,
 // and facilitates bidirectional data transfer between the client and the target server.
 //
+// This function is the core of the proxy server's operation. It handles each client
+// connection in a separate goroutine, allowing for concurrent handling of multiple clients.
+//
+// The function performs the following steps:
+// 1. Defers closing the Gordafarid connection to ensure cleanup.
+// 2. Retrieves the handshake result from the Gordafarid connection.
+// 3. Extracts the destination address and port from the handshake result.
+// 4. Establishes a connection to the target server.
+// 5. Sets up bidirectional data transfer between the client and the target server.
+// 6. Handles any errors that occur during the data transfer.
+//
 // Parameters:
-//   - ctx: The context for the connection
-//   - aead: The cipher for encryption/decryption
-//   - c: The client connection
+//   - gc: A pointer to a gordafarid.Conn, which represents the client connection.
 //
-// Example usage (internal to the Server.Start method):
+// The function doesn't return any values, but it logs various information and errors:
+// - Warns if unable to get the Gordafarid handshake result.
+// - Logs debug information about the handshake and connection process.
+// - Warns if unable to dial the target server.
+// - Logs errors that occur during data transfer, except for io.EOF which is expected.
 //
-//	go s.handleConnection(context.Background(), s.aead, conn)
+// Error handling:
+//   - If an error occurs during the handshake or when dialing the target server,
+//     the function logs the error and returns, closing the connection.
+//   - Errors during data transfer are logged, but don't cause the function to return immediately.
+//
+// Concurrency:
+// - The function uses goroutines and a WaitGroup to handle bidirectional data transfer concurrently.
+// - It creates an error channel to collect errors from the data transfer goroutines.
+// Note: This function is designed to be run as a goroutine for each incoming connection.
 func (s *Server) handleConnection(gc *gordafarid.Conn) {
+	// Close the Gordafarid connection when the function returns
 	defer gc.Close()
 
+	// Get the handshake result from the Gordafarid connection
 	handshakeResult, err := gc.GetHandshakeResult()
 	if err != nil {
-		logger.Warn(errors.Join(errUnableToGetGordafaridHandshakeResult, err))
+		logger.Error(errors.Join(errUnableToGetGordafaridHandshakeResult, err))
 		return
 	}
 
-	// Target info
+	// Extract target server information from the handshake result
 	dstAddr := string(handshakeResult.DstAddr)
 	dstPort := binary.BigEndian.Uint16(handshakeResult.DstPort[:])
 	targetAddr := net.JoinHostPort(dstAddr, fmt.Sprint(dstPort))
-	// Dial to target server
+
+	// Log debug information about the handshake and connection process
 	logger.Debug("Handshake done")
 	logger.Debug("Connecting to:", dstAddr)
+
+	// Establish a connection to the target server with a timeout
 	tconn, err := net.DialTimeout("tcp", targetAddr, time.Duration(s.cfg.Timeout.DialTimeout)*time.Second)
 	if err != nil {
+		// Log a warning if unable to connect to the target server
 		logger.Warn(errors.Join(shared_error.ErrServerDialFailed, err))
 		return
 	}
+	// Close the target server connection when the function returns
 	defer tconn.Close()
 
-	// Log target server address
+	// Log the target server address, handling domain names separately
 	if handshakeResult.Atyp == protocol.AtypDomain {
 		logger.Debug(fmt.Sprintf("Connected to: %s(%s)", dstAddr, tconn.RemoteAddr()))
 	} else {
 		logger.Debug("Connected to: ", tconn.RemoteAddr())
 	}
 
-	// Perform relay proxying
+	// Log the proxying information
 	logger.Debug(fmt.Sprintf("Proxying between %s/%s", gc.RemoteAddr(), tconn.RemoteAddr()))
 
-	// Initialize bidirectional data transfer
+	// Set up bidirectional data transfer
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	errChan := make(chan error, 2)
 
-	// Goroutine to copy data from client to remote
+	// Start a goroutine to copy data from client to remote server
 	go utils.DataTransfering(&wg, errChan, tconn, gc)
-	// Goroutine to copy data from remote to client
+	// Start a goroutine to copy data from remote server to client
 	go utils.DataTransfering(&wg, errChan, gc, tconn)
 
-	// Close the errChan after the dataTransfering goroutines are finished
+	// Close the error channel after both data transfer goroutines are finished
 	go func() {
 		wg.Wait()
 		close(errChan)
 	}()
 
-	// Print the possible errors if there are any
+	// Handle and log errors from the data transfer goroutines
 	for err := range errChan {
-		// The EOF error is common and expected
+		// Ignore EOF errors as they are expected when connections close
 		if !errors.Is(err, io.EOF) {
 			logger.Error(err)
 		}
