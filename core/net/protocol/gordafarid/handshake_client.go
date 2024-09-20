@@ -37,18 +37,18 @@ func (c *Conn) clientHandshake(ctx context.Context) error {
 
 	// Step 1: Send the initial greeting to the server
 	if err = c.clientSendGreeting(ctx); err != nil {
-		return err
+		return errors.Join(errClientFailedToSendInitialGreeting, err)
 	}
 
 	// Step 2: Handle the server's response to the greeting
 	if err = c.clientHandleGreetingResponse(ctx); err != nil {
-		return err
+		return errors.Join(errClientFailedToHandleInitialGreetingResponse, err)
 	}
 
 	// Step 3: Set up encryption using the agreed-upon algorithm and the client's password
 	aead, err := crypto.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
 	if err != nil {
-		return err
+		return errors.Join(errFailedToBuildAEADCipher, err)
 	}
 
 	// Wrap the existing connection with the newly created cipher for secure communication
@@ -56,11 +56,12 @@ func (c *Conn) clientHandshake(ctx context.Context) error {
 
 	// Step 4: Send the client's request to the server
 	if err = c.clientSendRequest(ctx); err != nil {
-		return err
+		return errors.Join(errClientFailedToSendRequest, err)
 	}
 
+	// Step 5: Handle the server's response to the request
 	if err = c.clientHandleReplyResponse(ctx); err != nil {
-		return err
+		return errors.Join(errClientFailedToHandleReplyResponse, err)
 	}
 
 	// Step 5: Mark the handshake as complete

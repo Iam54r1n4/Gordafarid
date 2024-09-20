@@ -6,6 +6,24 @@ var (
 	// General errors
 	errHandshakeFailed = errors.New("the Gordafarid handshake failed: protocol mismatch or authentication error")
 
+	// Initial greeting errors
+	errServerFailedToHandleInitialGreeting         = errors.New("failed to send the Gordafarid initial greeting")
+	errServerFailedToSendGreetingFailedResponse    = errors.New("failed to send the Gordafarid initial greeting failed response")
+	errServerFailedToSendGreetingSuccessResponse   = errors.New("failed to send the Gordafarid initial greeting succeeded response")
+	errClientFailedToSendInitialGreeting           = errors.New("failed to send the Gordafarid initial greeting")
+	errClientFailedToHandleInitialGreetingResponse = errors.New("failed to handle the Gordafarid greeting response")
+
+	// Crypto errors
+	errFailedToBuildAEADCipher = errors.New("failed to build the Gordafarid AEAD cipher")
+
+	// Request errors
+	errServerFailedToHandleRequest = errors.New("failed to handle the Gordafarid request")
+	errClientFailedToSendRequest   = errors.New("failed to send the Gordafarid request")
+
+	// Reply errors
+	errServerFailedToSendReplyResponse   = errors.New("failed to send the Gordafarid reply response")
+	errClientFailedToHandleReplyResponse = errors.New("failed to handle the Gordafarid reply response")
+
 	// Address type error
 	errUnableToReadAddressType = errors.New("unable to read the Gordafarid address type")
 

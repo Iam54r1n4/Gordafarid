@@ -30,31 +30,33 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 	// Step 1: Handle the client's greeting
 	if err = c.serverHandleGreeting(ctx); err != nil {
 		// If greeting fails, send a failure message to the client
-		c.serverSendGreetingFailed(ctx)
-		return err
+		if sendErr := c.serverSendGreetingFailed(ctx); sendErr != nil {
+			return errors.Join(errServerFailedToSendGreetingFailedResponse, sendErr, err)
+		}
+		return errors.Join(errServerFailedToHandleInitialGreeting, err)
 	}
 
 	// Step 2: Send a success message for the greeting
 	if err = c.serverSendGreetingSuccess(ctx); err != nil {
-		return err
+		return errors.Join(errServerFailedToSendGreetingSuccessResponse, err)
 	}
 
 	// Step 3: Set up encryption for the connection
 	aead, err := crypto.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
 	if err != nil {
-		return err
+		return errors.Join(errFailedToBuildAEADCipher, err)
 	}
 	// Wrap the connection with the cipher for encrypted communication
 	c.Conn = WrapConnToCipherConn(c.Conn, aead)
 
 	// Step 4: Handle the client's request
 	if err = c.handleRequest(ctx); err != nil {
-		return err
+		return errors.Join(errServerFailedToHandleRequest, err)
 	}
 
 	// Step 5: Send the server's reply to the client
 	if err = c.serverSendReply(ctx); err != nil {
-		return err
+		return errors.Join(errServerFailedToSendReplyResponse, err)
 	}
 
 	return nil
