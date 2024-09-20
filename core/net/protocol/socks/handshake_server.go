@@ -21,12 +21,13 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 	if c.GetHandshakeComplete() {
 		return nil
 	}
-	var err error
-	if err = c.serverHandleInitialGreeting(ctx); err != nil {
-		return err
+
+	if err := c.serverHandleInitialGreeting(ctx); err != nil {
+		return errors.Join(errFailedToHandleInitialGreeting, err)
 	}
-	if err = c.serverHandleRequest(ctx); err != nil {
-		return err
+
+	if err := c.serverHandleRequest(ctx); err != nil {
+		return errors.Join(errFailedToHandleRequest, err)
 	}
 	c.SetHandshakeComplete()
 
@@ -46,13 +47,13 @@ func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 	buf := make([]byte, 2)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
 		c.greeting.methods = []byte{noAcceptableMethod}
-		return errors.Join(errSocks5UnableToReadVersion, err)
+		return errors.Join(errUnableToReadVersion, err)
 	}
 
 	// Verify SOCKS version
 	if buf[0] != socks5Version {
 		c.greeting.methods = []byte{noAcceptableMethod}
-		return errors.Join(errSocks5UnsupportedVersion, fmt.Errorf("sent version: %d", buf[0]))
+		return fmt.Errorf("%w: sent version: %d", errUnsupportedVersion, buf[0])
 	}
 	c.greeting.version = buf[0]
 
@@ -60,7 +61,7 @@ func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 	nMethods := buf[1]
 	if nMethods == 0 {
 		c.greeting.methods = []byte{noAcceptableMethod}
-		return errors.Join(errSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", nMethods))
+		return fmt.Errorf("%w: sent nmethods: %d", errInvalidNMethodsValue, nMethods)
 	}
 	c.greeting.nMethods = buf[1]
 
@@ -68,7 +69,7 @@ func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 	methods := make([]byte, nMethods)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, methods); err != nil {
 		c.greeting.methods = []byte{noAcceptableMethod}
-		return errors.Join(errSocks5InvalidNMethodsValue, fmt.Errorf("sent nmethods: %d", nMethods), err)
+		return fmt.Errorf("%w: sent nmethods: %d, error: %v", errInvalidNMethodsValue, nMethods, err)
 	}
 	c.greeting.methods = methods
 	return nil
@@ -84,24 +85,26 @@ func (c *Conn) serverParseInitialGreetingHeaders(ctx context.Context) error {
 // Returns:
 //   - error: Any error encountered during handling of the initial greeting.
 func (c *Conn) serverHandleInitialGreeting(ctx context.Context) error {
-	var err error
-	if err = c.serverParseInitialGreetingHeaders(ctx); err != nil {
-		return err
+
+	if err := c.serverParseInitialGreetingHeaders(ctx); err != nil {
+		return errors.Join(errFailedToParseInitialGreetingHeaders, err)
 	}
 	bestMethod, err := c.selectPreferredSocks5AuthMethod()
 	if err != nil {
 		return err
 	}
-	err = c.verifyMethods(bestMethod)
-	if err != nil {
-		c.serverSendMethodSelection(ctx, socks5Version, noAcceptableMethod)
+	if err := c.verifyMethods(bestMethod); err != nil {
+		if sendErr := c.serverSendMethodSelection(ctx, socks5Version, noAcceptableMethod); sendErr != nil {
+			return errors.Join(errFailedToSendNoAcceptableMethodResponse, sendErr, err)
+		}
+		return errors.Join(errFailedToVerifyMethods, err)
 	}
-	if err = c.serverSendMethodSelection(ctx, socks5Version, bestMethod); err != nil {
-		return err
+	if err := c.serverSendMethodSelection(ctx, socks5Version, bestMethod); err != nil {
+		return errors.Join(errFailedToSendMethodSelectionResponse, err)
 	}
 	if bestMethod == userPassAuthMethod {
-		if err = c.serverHandleUserPassAuthMethodNegotiation(ctx); err != nil {
-			return err
+		if err := c.serverHandleUserPassAuthMethodNegotiation(ctx); err != nil {
+			return errors.Join(errFailedToHandleUserPassAuthNegotiation, err)
 		}
 	}
 
@@ -120,10 +123,10 @@ func (c *Conn) serverParseRequestHeaders(ctx context.Context) error {
 	// Read version, command, and reserved byte
 	buf := make([]byte, 3)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errSocks5UnableToReadRequest, err)
+		return errors.Join(errUnableToReadRequest, err)
 	}
 	if buf[0] != socks5Version || buf[1] != 1 {
-		return errors.Join(errSocks5UnsupportedVersionOrCommand, fmt.Errorf("unsupported socks request:\nVersion: %d\nCommand: %d", buf[0], buf[1]))
+		return fmt.Errorf("%w: unsupported socks request: Version: %d, Command: %d", errUnsupportedVersionOrCommand, buf[0], buf[1])
 	}
 	c.request.Version = buf[0]
 	// TODO verify cmd and define const cmds
@@ -164,7 +167,7 @@ func (c *Conn) serverSendReplyResponse(ctx context.Context) error {
 	c.reply.DstAddr = []byte{0, 0, 0, 0}
 	c.reply.DstPort = [2]byte{0, 0}
 	if _, err := utils.WriteWithContext(ctx, c.Conn, c.reply.Bytes()); err != nil {
-		return errors.Join(errSocks5UnableToSendReplyResponse, err)
+		return fmt.Errorf("%w: %v", errUnableToSendReplyResponse, err)
 	}
 	return nil
 }
@@ -178,12 +181,11 @@ func (c *Conn) serverSendReplyResponse(ctx context.Context) error {
 // Returns:
 //   - error: Any error encountered during handling of the request.
 func (c *Conn) serverHandleRequest(ctx context.Context) error {
-	var err error
-	if err = c.serverParseRequestHeaders(ctx); err != nil {
-		return err
+	if err := c.serverParseRequestHeaders(ctx); err != nil {
+		return errors.Join(errFailedToParseRequestHeaders, err)
 	}
-	if err = c.serverSendReplyResponse(ctx); err != nil {
-		return err
+	if err := c.serverSendReplyResponse(ctx); err != nil {
+		return errors.Join(errFailedToSendReplyResponse, err)
 	}
 	return nil
 }
@@ -199,10 +201,8 @@ func (c *Conn) serverHandleRequest(ctx context.Context) error {
 // Returns:
 //   - error: Any error encountered during sending of the response.
 func (c *Conn) serverSendTwoBytesResponse(ctx context.Context, version, method byte) error {
-	if _, err := utils.WriteWithContext(ctx, c.Conn, []byte{version, method}); err != nil {
-		return err
-	}
-	return nil
+	_, err := utils.WriteWithContext(ctx, c.Conn, []byte{version, method})
+	return err
 }
 
 // serverSendMethodSelection sends the method selection response to the client.
@@ -217,7 +217,7 @@ func (c *Conn) serverSendTwoBytesResponse(ctx context.Context, version, method b
 //   - error: Any error encountered during sending of the method selection response.
 func (c *Conn) serverSendMethodSelection(ctx context.Context, version, method byte) error {
 	if err := c.serverSendTwoBytesResponse(ctx, version, method); err != nil {
-		return errors.Join(errSocks5UnableToSendMethodSelectionResponse, err)
+		return fmt.Errorf("%w: %v", errUnableToSendMethodSelectionResponse, err)
 	}
 	return nil
 }
