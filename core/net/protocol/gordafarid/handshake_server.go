@@ -153,9 +153,9 @@ func (c *Conn) handleRequest(ctx context.Context) error {
 func (c *Conn) buildReplyResponse() error {
 	c.reply.Version = gordafaridVersion
 	c.reply.Status = replySuccess
-	c.reply.bind.Atyp = c.request.Atyp
-	c.reply.bind.DstAddr = c.request.DstAddr
-	c.reply.bind.DstPort = c.request.DstPort
+	c.reply.Bind.Atyp = c.request.Atyp
+	c.reply.Bind.DstAddr = c.request.DstAddr
+	c.reply.Bind.DstPort = c.request.DstPort
 	return nil
 }
 
