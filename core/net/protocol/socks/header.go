@@ -43,12 +43,12 @@ func (upah *userPassAuthHeader) Size() int {
 
 // Bytes returns the username/password authentication header as a byte slice.
 // This method is used to serialize the header for network transmission.
-func (ah *userPassAuthHeader) Bytes() []byte {
-	res := make([]byte, 0, ah.Size())
-	res = append(res, []byte{ah.version, ah.uLen}...)
-	res = append(res, ah.username...)
-	res = append(res, ah.pLen)
-	res = append(res, ah.password...)
+func (upah *userPassAuthHeader) Bytes() []byte {
+	res := make([]byte, 0, upah.Size())
+	res = append(res, []byte{upah.version, upah.uLen}...)
+	res = append(res, upah.username...)
+	res = append(res, upah.pLen)
+	res = append(res, upah.password...)
 	return res
 }
 
