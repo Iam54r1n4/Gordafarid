@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Iam54r1n4/Gordafarid/core/crypto"
+	"github.com/Iam54r1n4/Gordafarid/core/net/protocol/gordafarid/crypto"
 )
 
 // serverAddr holds the configuration for the server
@@ -20,10 +20,7 @@ type ServerConfig struct {
 	Timeout         timeoutConfig `toml:"timeout"`
 }
 
-func LoadServerConfig(path string) (*ServerConfig, error) {
-	if path == "" {
-		path = DefaultConfigFilePath
-	}
+func loadServerConfig(path string) (*ServerConfig, error) {
 	var config ServerConfig
 	var err error
 
@@ -34,6 +31,7 @@ func LoadServerConfig(path string) (*ServerConfig, error) {
 		return nil, err
 	}
 	config.applyDefaultValues()
+
 	return &config, nil
 }
 

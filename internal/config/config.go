@@ -1,7 +1,11 @@
 package config
 
-// DefaultConfigFilePath is the default path for the configuration file
-const DefaultConfigFilePath = "./config.toml"
+import (
+	"errors"
+	"sync"
+
+	"github.com/Iam54r1n4/Gordafarid/internal/logger"
+)
 
 // timeoutConfig holds various timeout settings
 type timeoutConfig struct {
@@ -14,5 +18,30 @@ type timeoutConfig struct {
 type Account struct {
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	Hash     string
+}
+
+var (
+	clientConfig            *ClientConfig
+	serverConfig            *ServerConfig
+	clientConfigLoadingOnce sync.Once
+	serverConfigLoadingOnce sync.Once
+)
+
+func GetClientCofig(path string) *ClientConfig {
+	clientConfigLoadingOnce.Do(func() {
+		var err error
+		if clientConfig, err = loadClientConfig(path); err != nil {
+			logger.Fatal(errors.Join(err))
+		}
+	})
+	return clientConfig
+}
+func GetServerConfig(path string) *ServerConfig {
+	serverConfigLoadingOnce.Do(func() {
+		var err error
+		if serverConfig, err = loadServerConfig(path); err != nil {
+			logger.Fatal(errors.Join(err))
+		}
+	})
+	return serverConfig
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Iam54r1n4/Gordafarid/core/crypto"
+	"github.com/Iam54r1n4/Gordafarid/core/net/protocol/gordafarid/crypto"
 )
 
 // clientAddr holds the configuration for the client
@@ -25,10 +25,7 @@ type ClientConfig struct {
 	Socks5Credentials socks5credentialsConfig `toml:"socks5Credentials"`
 }
 
-func LoadClientConfig(path string) (*ClientConfig, error) {
-	if path == "" {
-		path = DefaultConfigFilePath
-	}
+func loadClientConfig(path string) (*ClientConfig, error) {
 	var config ClientConfig
 	var err error
 
