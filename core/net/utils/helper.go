@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Iam54r1n4/Gordafarid/internal/proxy_error"
+	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
 )
 
 // ReadWithContext reads data from a net.Conn with context support.
@@ -46,33 +46,70 @@ func ReadWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
 	}
 }
 
+// WriteWithContext writes data to a net.Conn with context support.
+// It allows for cancellation and timeout handling using the provided context.
+//
+// Parameters:
+//   - ctx: The context for cancellation and timeout control.
+//   - c: The net.Conn to write to.
+//   - buf: The buffer containing data to write.
+//
+// Returns:
+//   - int: The number of bytes written.
+//   - error: Any error that occurred during the write operation or context cancellation.
+func WriteWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
+	writeChan := make(chan struct {
+		n   int
+		err error
+	})
+
+	go func() {
+		defer close(writeChan)
+		n, err := c.Write(buf)
+		writeChan <- struct {
+			n   int
+			err error
+		}{
+			n:   n,
+			err: err,
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case v := <-writeChan:
+		return v.n, v.err
+	}
+}
+
 // ReadAddress reads the address based on the address type
 func ReadAddress(ctx context.Context, conn net.Conn, atyp byte) ([]byte, error) {
 	var buf []byte
 
 	switch atyp {
-	case AtypIPv4:
+	case protocol.AtypIPv4:
 		buf = make([]byte, net.IPv4len)
 		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
-			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadIpv4, err)
+			return nil, errors.Join(errUnableToReadIpv4, err)
 		}
-	case AtypIPv6:
+	case protocol.AtypIPv6:
 		buf = make([]byte, net.IPv6len)
 		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
-			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadIpv6, err)
+			return nil, errors.Join(errUnableToReadIpv6, err)
 		}
-	case AtypDomain:
+	case protocol.AtypDomain:
 		buf = make([]byte, 1)
 		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
-			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
+			return nil, errors.Join(errUnableToReadDomain, err)
 		}
 		domainLen := buf[0]
 		buf = make([]byte, domainLen)
 		if _, err := ReadWithContext(ctx, conn, buf); err != nil {
-			return nil, errors.Join(proxy_error.ErrSocks5UnableToReadDomain, err)
+			return nil, errors.Join(errUnableToReadDomain, err)
 		}
 	default:
-		return nil, errors.Join(proxy_error.ErrSocks5UnsupportedAddressType, fmt.Errorf("sent address type: %d", atyp))
+		return nil, errors.Join(errUnsupportedAddressType, fmt.Errorf("sent address type: %d", atyp))
 	}
 	return buf, nil
 }
@@ -81,7 +118,7 @@ func ReadAddress(ctx context.Context, conn net.Conn, atyp byte) ([]byte, error) 
 func ReadPort(ctx context.Context, conn net.Conn) ([2]byte, error) {
 	var port [2]byte
 	if _, err := ReadWithContext(ctx, conn, port[:]); err != nil {
-		return [2]byte{}, errors.Join(proxy_error.ErrSocks5UnableToReadPort, err)
+		return [2]byte{}, errors.Join(errUnableToReadPort, err)
 	}
 	return port, nil
 }
