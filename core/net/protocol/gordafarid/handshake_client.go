@@ -150,12 +150,12 @@ func (c *Conn) clientHandleReplyResponse(ctx context.Context) error {
 	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
 		return errors.Join(errUnableToReadAddressType, err)
 	}
-	c.reply.bind.Atyp = buf[0]
-	c.reply.bind.DstAddr, err = utils.ReadAddress(ctx, c.Conn, c.reply.bind.Atyp)
+	c.reply.Bind.Atyp = buf[0]
+	c.reply.Bind.DstAddr, err = utils.ReadAddress(ctx, c.Conn, c.reply.Bind.Atyp)
 	if err != nil {
 		return err
 	}
-	c.reply.bind.DstPort, err = utils.ReadPort(ctx, c.Conn)
+	c.reply.Bind.DstPort, err = utils.ReadPort(ctx, c.Conn)
 
 	return err
 }

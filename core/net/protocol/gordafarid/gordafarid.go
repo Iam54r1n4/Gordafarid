@@ -250,7 +250,7 @@ func buildClientConn(underlyingConn net.Conn, dialAccountConfig *DialAccountConf
 		},
 		greeting: greetingHeader{
 			hash: accountHash,
-			BasicHeaader: protocol.BasicHeaader{
+			BasicHeader: protocol.BasicHeader{
 				Version: gordafaridVersion,
 				Cmd:     protocol.CmdConnect,
 			},
