@@ -144,15 +144,6 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 	// Perform relay proxying
 	logger.Debug(fmt.Sprintf("Proxying between %s/%s", gc.RemoteAddr(), tconn.RemoteAddr()))
 
-	// x := []byte("i will fuck you")
-	// gc.Write(x)
-	// logger.Warn("x writeen")
-
-	// y := make([]byte, 15)
-	// gc.Read(y)
-	// logger.Warn("the y received in bytes:", y)
-	// logger.Warn("the y received in string:", string(y))
-
 	// Initialize bidirectional data transfer
 	wg := sync.WaitGroup{}
 	wg.Add(2)
