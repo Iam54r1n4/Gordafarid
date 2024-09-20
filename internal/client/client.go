@@ -122,9 +122,32 @@ func (c *Client) Start() error {
 
 // handleConnection manages an individual client connection.
 //
+// This function is responsible for handling a single SOCKS5 client connection.
+// It performs the following steps:
+// 1. Retrieves the SOCKS5 handshake result.
+// 2. Creates a dialer connection configuration based on the handshake result.
+// 3. Establishes a connection to the remote server using the Gordafarid protocol.
+// 4. Initiates bidirectional data transfer between the client and the remote server.
+// 5. Handles and logs any errors that occur during the process.
+//
+// The function uses goroutines to perform concurrent data transfer in both directions
+// (client to remote and remote to client). It also utilizes a wait group and an error
+// channel to manage these goroutines and collect any errors that may occur during
+// the data transfer process.
+//
 // Parameters:
-//   - ctx: The context for the connection, used for cancellation and timeouts.
-//   - conn: The SOCKS5 connection to handle.
+//   - ctx: context.Context - The context for the connection, used for cancellation and timeouts.
+//   - conn: *socks.Conn - The SOCKS5 connection to handle.
+//
+// The function doesn't return any values, but it logs errors and manages the lifecycle
+// of the connection, including closing it when the function exits.
+//
+// Error handling:
+//   - If there's an error getting the SOCKS5 handshake result, it logs the error and returns.
+//   - If there's an error dialing to the remote server, it logs the error and returns.
+//   - Any errors during data transfer are logged, except for io.EOF which is expected and ignored.
+//
+// Note: This function is designed to be run as a goroutine for each incoming connection.
 func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
 	defer conn.Close()
 
