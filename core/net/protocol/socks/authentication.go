@@ -1,3 +1,4 @@
+// Package socks implements the SOCKS5 proxy protocol.
 package socks
 
 import (
@@ -8,8 +9,8 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
 )
 
-// authenticate checks if the provided username and password are valid
-// It returns nil if authentication is successful, or an error if it fails
+// authenticate checks if the provided username and password are valid.
+// It returns nil if authentication is successful, or an error if it fails.
 func (c *Conn) authenticate() error {
 	// If no credentials are set, authentication is not required
 	if c.serverConfig.credentials == nil {
@@ -19,7 +20,7 @@ func (c *Conn) authenticate() error {
 	// Check if the username exists in the credentials map
 	password, ok := c.serverConfig.credentials[string(c.userPassAuth.username)]
 	if !ok {
-		return errSocks5AuthIncorrectUsername
+		return errAuthIncorrectUsername
 	}
 
 	// Compare the provided password with the stored password
@@ -27,11 +28,12 @@ func (c *Conn) authenticate() error {
 		return nil
 	}
 
-	return errSocks5AuthIncorrectPassword
+	return errAuthIncorrectPassword
 }
 
 // selectPreferredSocks5AuthMethod determines the best authentication method
-// based on the methods provided by the client and the server's configuration
+// based on the methods provided by the client and the server's configuration.
+// It returns the selected method as a byte and an error if no acceptable method is found.
 func (c *Conn) selectPreferredSocks5AuthMethod() (byte, error) {
 	noAuth, userPassAuth := false, false
 
@@ -58,46 +60,49 @@ func (c *Conn) selectPreferredSocks5AuthMethod() (byte, error) {
 	}
 
 	// If no acceptable method is found, return an error
-	return noAcceptableMethod, errors.Join(errSocks5InvalidMethod, fmt.Errorf("sent auth methods: %v", c.greeting.methods))
+	return noAcceptableMethod, errors.Join(errInvalidMethod, fmt.Errorf("sent auth methods: %v", c.greeting.methods))
 }
 
 // serverParseUserPassAuthMethodHeaders reads and parses the username/password
-// authentication headers from the client
+// authentication headers from the client.
+// It returns an error if there's any issue reading or parsing the headers.
 func (c *Conn) serverParseUserPassAuthMethodHeaders(ctx context.Context) error {
 	// Read authentication version
 	buf := make([]byte, 1)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errSocks5UnableToReadUserPassAuthVersion, err)
+		return errors.Join(errUnableToReadUserPassAuthVersion, err)
 	}
 	if buf[0] != userPassAuthVersion {
-		return errors.Join(errSocks5UnsupportedUserPassAuthVersion, fmt.Errorf("sent version: %d", buf[0]))
+		return errors.Join(errUnsupportedUserPassAuthVersion, fmt.Errorf("sent version: %d", buf[0]))
 	}
 	c.userPassAuth.version = buf[0]
 
 	// Read username length and username
 	if _, err := utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errSocks5UnableToReadUserPassAuthUsernameLength, err)
+		return errors.Join(errUnableToReadUserPassAuthUsernameLength, err)
 	}
 	c.userPassAuth.uLen = buf[0]
 	c.userPassAuth.username = make([]byte, c.userPassAuth.uLen)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, c.userPassAuth.username); err != nil {
-		return errors.Join(errSocks5UnableToReadUserPassAuthUsername, err)
+		return errors.Join(errUnableToReadUserPassAuthUsername, err)
 	}
 
 	// Read password length and password
 	if _, err := utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
-		return errors.Join(errSocks5UnableToReadUserPassAuthPasswordLength, err)
+		return errors.Join(errUnableToReadUserPassAuthPasswordLength, err)
 	}
 	c.userPassAuth.pLen = buf[0]
 	c.userPassAuth.password = make([]byte, c.userPassAuth.pLen)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, c.userPassAuth.password); err != nil {
-		return errors.Join(errSocks5UnableToReadUserPassAuthPassword, err)
+		return errors.Join(errUnableToReadUserPassAuthPassword, err)
 	}
 	return nil
 }
 
 // serverHandleUserPassAuthMethodNegotiation handles the username/password
-// authentication negotiation process
+// authentication negotiation process.
+// It parses the authentication headers, attempts to authenticate, and sends the appropriate response.
+// Returns an error if any step in the process fails.
 func (c *Conn) serverHandleUserPassAuthMethodNegotiation(ctx context.Context) error {
 	var err error
 
@@ -110,25 +115,26 @@ func (c *Conn) serverHandleUserPassAuthMethodNegotiation(ctx context.Context) er
 	if err = c.authenticate(); err != nil {
 		// Send failed response if auth failed
 		if err := c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthFailed); err != nil {
-			return errors.Join(errSocks5UnableToSendUserPassAuthFailedResponse, err)
+			return errors.Join(errUnableToSendUserPassAuthFailedResponse, err)
 		}
-		return errors.Join(errSocks5AuthenticationFailed, fmt.Errorf("username: %s, password: %s", string(c.userPassAuth.username), string(c.userPassAuth.password)))
+		return errors.Join(errAuthenticationFailed, fmt.Errorf("username: %s, password: %s", string(c.userPassAuth.username), string(c.userPassAuth.password)))
 	}
 
 	// Send success response
 	if err = c.serverSendTwoBytesResponse(ctx, userPassAuthVersion, userPassAuthSuccess); err != nil {
-		return errors.Join(errSocks5UnableToSendUserPassAuthSuccessResponse, err)
+		return errors.Join(errUnableToSendUserPassAuthSuccessResponse, err)
 	}
 
 	return nil
 }
 
 // verifyMethods checks if the selected authentication method is compatible
-// with the server's configuration
+// with the server's configuration.
+// Returns an error if username/password authentication is required but not supported.
 func (c *Conn) verifyMethods(bestMethod byte) error {
 	// If username/password authentication is required and not supported, return an error
 	if c.serverConfig.credentials != nil && bestMethod != userPassAuthMethod {
-		return errors.Join(errSocks5NoAcceptableMethod, fmt.Errorf("sent nmethods: %d", c.greeting.nMethods))
+		return errors.Join(errNoAcceptableMethod, fmt.Errorf("sent nmethods: %d", c.greeting.nMethods))
 	}
 	return nil
 }
