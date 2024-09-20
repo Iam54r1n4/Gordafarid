@@ -147,11 +147,15 @@ func (c *Client) Start() error {
 //   - If there's an error dialing to the remote server, it logs the error and returns.
 //   - Any errors during data transfer are logged, except for io.EOF which is expected and ignored.
 //
+// Concurrency:
+// - The function uses goroutines and a WaitGroup to handle bidirectional data transfer concurrently.
+// - It creates an error channel to collect errors from the data transfer goroutines.
 // Note: This function is designed to be run as a goroutine for each incoming connection.
 func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
+	// Close the incoming SOCKS5(TCP) connection when the function returns
 	defer conn.Close()
 
-	// Get SOCKS5 handshake result
+	// Get SOCKS5 handshake result from the SOCKS5 connection
 	handshakeResult, err := conn.GetHandshakeResult()
 	if err != nil {
 		logger.Error(errUnableToGetSocks5HandshakeResult, err)
