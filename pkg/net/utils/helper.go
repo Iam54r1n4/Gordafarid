@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
 )
 
 // ReadWithContext reads data from a net.Conn with context support.

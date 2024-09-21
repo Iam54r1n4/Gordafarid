@@ -6,7 +6,7 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
 )
 
 // handshakeFunction is a type that represents a function to perform a handshake.

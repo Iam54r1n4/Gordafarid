@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
 )
 
 // Hash represents a SHA-256 hash value.

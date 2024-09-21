@@ -5,8 +5,8 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
-	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
 
 // handshakeFunction is a type definition for a function that performs

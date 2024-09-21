@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol/gordafarid"
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol/socks"
-	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
 	"github.com/Iam54r1n4/Gordafarid/internal/flags"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/shared_error"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/socks"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
 
 // errUnableToGetSocks5HandshakeResult is an error returned when the SOCKS5 handshake result cannot be obtained.

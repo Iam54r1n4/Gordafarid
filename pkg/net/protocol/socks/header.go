@@ -2,7 +2,7 @@
 package socks
 
 import (
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
 )
 
 // greetingHeader represents the initial greeting message in the SOCKS protocol.

@@ -1,7 +1,7 @@
 // Package gordafarid implements the Gordafarid protocol, a custom network protocol for secure communication.
 package gordafarid
 
-import "github.com/Iam54r1n4/Gordafarid/core/net/protocol"
+import "github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
 
 // greetingHeader represents the header structure for the greeting message in the Gordafarid protocol.
 type greetingHeader struct {

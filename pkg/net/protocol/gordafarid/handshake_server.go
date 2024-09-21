@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol"
-	"github.com/Iam54r1n4/Gordafarid/core/net/protocol/gordafarid/crypto"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto"
 
-	"github.com/Iam54r1n4/Gordafarid/core/net/utils"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
 
 // serverHandshake performs the server-side handshake process for the Gordafarid protocol.
