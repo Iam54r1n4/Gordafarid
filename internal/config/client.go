@@ -11,7 +11,8 @@ import (
 
 // clientAddr holds the configuration for the client
 type clientAddr struct {
-	Address string `toml:"address"` // The address for the client to connect to
+	Address  string `toml:"address"`  // The address for the client to connect to
+	HashSalt string `toml:"hashSalt"` // The hash salt for the Gordafarid
 }
 
 // socks5credentialsConfig is a map of usernames to passwords for SOCKS5 authentication
@@ -100,5 +101,8 @@ func (cc *ClientConfig) applyDefaultValues() {
 	// Set default Gordafarid handshake timeout to 10 seconds if not specified
 	if cc.Timeout.GordafaridHandshakeTimeout == 0 {
 		cc.Timeout.GordafaridHandshakeTimeout = 10
+	}
+	if len(cc.Client.HashSalt) < 1 {
+		cc.Client.HashSalt = defaultHashSalt
 	}
 }
