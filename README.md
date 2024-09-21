@@ -3,10 +3,10 @@
 Gordafarid is a simple encrypted proxy server/client implementation in Go. Designed primarily for educational purposes, this project demonstrates how to build a basic proxy system with encryption, leveraging AEAD ciphers for secure communication.
 
 #### Key Points
-   - Data transfer: SOCKS5 over TCP with AEAD encryption for secure communication
-   - SOCKS5: Implemented SOCKS5 handshake process
-   - SOCKS5: Implemented SOCKS5 Username/Password authentication process
-   - Asynchronous I/O : Efficient, non-blocking operations
+   - Implemented SOCKS5 handshake process for client-side
+   - Implemented SOCKS5 Username/Password authentication process for client-side
+   - Implemented custom protocol named Gordafarid for client-server communication
+   - Utilize AEAD ciphers for data encryption
    - Configurable: Easily customizable with TOML configuration files
 
 ## Technical Overview
