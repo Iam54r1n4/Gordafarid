@@ -136,7 +136,7 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 - This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Acknowledgements
-- Special thanks to @ReturnFi for their valuable assistance
+- Special thanks to [@ReturnFI](https://github.com/ReturnFI for their valuable assistance
 
 ## Disclaimer
 
