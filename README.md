@@ -68,8 +68,9 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 ## Installation
 
    - ##### Install from release page:
+      - ##### Download the appropriate executable
+         - [Releases](https://github.com/Iam54r1n4/Gordafarid/releases) page
       - ##### Running the Server
-         - Download the appropriate executable from [Releases](https://github.com/Iam54r1n4/Gordafarid/releases) page
          - Set the configuration file for the server
             > The best practice is to put the configuration file in the same directory as the executable, or use the -config flag to specify the path to the configuration file.
          - Run the server
@@ -77,7 +78,6 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
       
 
       - ##### Running the Client
-         - Download the appropriate executable from [Releases](https://github.com/Iam54r1n4/Gordafarid/releases) page
          - Set the configuration file for the client
             > The best practice is to put the configuration file in the same directory as the executable, or use the -config flag to specify the path to the configuration file.
          - Run the client
