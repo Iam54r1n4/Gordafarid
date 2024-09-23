@@ -99,7 +99,7 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
             ```
          - Build the server
             ```bash
-               go build -o gordafarid-server -v .
+            go build -o gordafarid-server -v .
             ```
          - Run the server
             ```bash
