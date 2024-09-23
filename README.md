@@ -142,4 +142,3 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 
 - This project should not be used in production environments without significant security enhancements and thorough testing.
 - I wrote this project in less than two weeks, so it's not perfect.
-- [Lyrics](https://github.com/Iam54r1n4/Gordafarid/blob/main/LYRICS.md)
