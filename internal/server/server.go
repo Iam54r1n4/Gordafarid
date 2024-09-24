@@ -137,6 +137,7 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 	defer gc.Close()
 
 	// Get the handshake result from the Gordafarid connection
+	logger.Debug("Getting the Gordafarid handshake result...")
 	handshakeResult, err := gc.GetHandshakeResult()
 	if err != nil {
 		logger.Error(errors.Join(errUnableToGetGordafaridHandshakeResult, err))
@@ -149,10 +150,10 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 	targetAddr := net.JoinHostPort(dstAddr, fmt.Sprint(dstPort))
 
 	// Log debug information about the handshake and connection process
-	logger.Debug("Handshake done")
-	logger.Debug("Connecting to:", dstAddr)
+	logger.Debug("The Gordafarid handshake result received")
 
 	// Establish a connection to the target server with a timeout
+	logger.Debug("Connecting to:", dstAddr)
 	tconn, err := net.DialTimeout("tcp", targetAddr, time.Duration(s.cfg.Timeout.DialTimeout)*time.Second)
 	if err != nil {
 		// Log a warning if unable to connect to the target server
@@ -169,13 +170,13 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 		logger.Debug("Connected to: ", tconn.RemoteAddr())
 	}
 
-	// Log the proxying information
-	logger.Debug(fmt.Sprintf("Proxying between %s/%s", gc.RemoteAddr(), tconn.RemoteAddr()))
-
 	// Set up bidirectional data transfer
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	errChan := make(chan error, 2)
+
+	// Log the proxying information
+	logger.Debug(fmt.Sprintf("Proxying between %s/%s", gc.RemoteAddr(), tconn.RemoteAddr()))
 
 	// Start a goroutine to copy data from client to remote server
 	go utils.DataTransfering(&wg, errChan, tconn, gc)

@@ -4,6 +4,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -109,7 +110,7 @@ func (c *Client) Start() error {
 			logger.Warn(errors.Join(shared_error.ErrConnectionAccepting, err))
 			continue
 		}
-		logger.Debug("Accepted SOCKS5 connection from:", conn.RemoteAddr())
+		logger.Info("Accepted SOCKS5 connection from:", conn.RemoteAddr())
 
 		// Create a context with a 1-hour timeout for each connection
 		ctx, cancel := context.WithTimeout(context.Background(), time.Hour*1)
@@ -156,11 +157,13 @@ func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
 	defer conn.Close()
 
 	// Get SOCKS5 handshake result from the SOCKS5 connection
+	logger.Debug("Getting the SOCKS5 handshake result...")
 	handshakeResult, err := conn.GetHandshakeResult()
 	if err != nil {
 		logger.Error(errUnableToGetSocks5HandshakeResult, err)
 		return
 	}
+	logger.Debug("The SOCKS5 handshake result received")
 
 	// Create dialer connection config
 	dialerConnConfig := gordafarid.NewDialConnConfig(protocol.NewAddressHeader(handshakeResult.Atyp, handshakeResult.DstAddr, handshakeResult.DstPort))
@@ -168,15 +171,22 @@ func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
 	// Dial to remote server using Gordafarid protocol
 	gordafaridHandshakeCtx, cancel := context.WithTimeout(ctx, time.Duration(c.cfg.Timeout.GordafaridHandshakeTimeout)*time.Second)
 	defer cancel()
+	logger.Debug("Dialing to remote server using Gordafarid protocol...")
 	grc, err := c.gordafaridDialer.DialContext(gordafaridHandshakeCtx, dialerConnConfig, c.cfg.Server.Address)
 	if err != nil {
 		logger.Warn(errors.Join(shared_error.ErrClientToServerDialFailed, err))
 		return
 	}
-	// Initialize bidirectional data transferring
+	logger.Debug("Connection established with remote server using Gordafarid protocol")
+
+	// Set up bidirectional data transfer
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	errChan := make(chan error, 2)
+
+	// Log the proxying information
+	logger.Debug(fmt.Sprintf("Proxying between %s/%s", conn.RemoteAddr(), grc.RemoteAddr()))
+
 	// Goroutine to copy data from client to remote
 	go utils.DataTransfering(&wg, errChan, grc, conn)
 	// Goroutine to copy data from remote to client
@@ -188,9 +198,9 @@ func (c *Client) handleConnection(ctx context.Context, conn *socks.Conn) {
 		close(errChan)
 	}()
 
-	// Print the possible errors if there are any
+	// Handle and log errors from the data transfer goroutines
 	for err := range errChan {
-		// The EOF error is common and expected, so we ignore it
+		// Ignore EOF errors as they are expected when connections close
 		if !errors.Is(err, io.EOF) {
 			logger.Error(err)
 		}
