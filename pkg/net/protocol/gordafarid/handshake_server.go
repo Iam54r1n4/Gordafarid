@@ -58,6 +58,7 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 		return errors.Join(errServerFailedToSendReplyResponse, err)
 	}
 
+	c.SetHandshakeComplete()
 	return nil
 }
 
