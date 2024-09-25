@@ -14,6 +14,8 @@ import (
 // Hash represents a SHA-256 hash value.
 type Hash [HashSize]byte
 
+const InitPasswordSize = 32
+
 // Listener wraps a net.Listener with Gordafarid-specific functionality.
 type Listener struct {
 	net.Listener
@@ -39,15 +41,17 @@ type ServerConfig struct {
 	Credentials         []Credential // Server-side credentials for authentication
 	HashSalt            string       // Salt used in hash calculations (required for both server and client)
 	EncryptionAlgorithm string       // Encryption algorithm to be used
+	InitPassword        string       // Initial password for decrypting the client's initial greeting
 	HandshakeTimeout    int          // Handshake timeout in seconds
 }
 
 // NewServerConfig creates a new ServerConfig instance with the provided parameters.
-func NewServerConfig(credentials []Credential, hashSalt string, encryptionAlgorithm string, handshakeTimeout int) *ServerConfig {
+func NewServerConfig(credentials []Credential, hashSalt, encryptionAlgorithm, initPassword string, handshakeTimeout int) *ServerConfig {
 	return &ServerConfig{
 		Credentials:         credentials,
 		HashSalt:            hashSalt,
 		EncryptionAlgorithm: encryptionAlgorithm,
+		InitPassword:        initPassword,
 		HandshakeTimeout:    handshakeTimeout,
 	}
 }
@@ -62,6 +66,7 @@ func (scc *ServerConfig) convertToRealConfig() *Config {
 		realConfig.serverCredentials[hash] = []byte(item.Password)
 	}
 	realConfig.encryptionAlgorithm = scc.EncryptionAlgorithm
+	copy(realConfig.initPassword[:], []byte(scc.InitPassword))
 	realConfig.handshakeTimeout = scc.HandshakeTimeout
 	return &realConfig
 }
@@ -73,6 +78,7 @@ type serverCredentials map[Hash][]byte
 type Config struct {
 	serverCredentials   serverCredentials
 	encryptionAlgorithm string
+	initPassword        [InitPasswordSize]byte
 	handshakeTimeout    int // In seconds
 }
 
@@ -111,30 +117,32 @@ func Listen(laddr string, config *ServerConfig) (*Listener, error) {
 	return NewListener(ln, config), nil
 }
 
-// DialAccountConfig holds the configuration for client-side authentication.
-type DialAccountConfig struct {
+// dialAccountConfig holds the configuration for client-side authentication.
+type dialAccountConfig struct {
 	Account         Credential
 	HashSalt        string
+	InitPassword    string // Client side init password for encrypting the client's initial greeting
 	CryptoAlgorithm string
 }
 
 // NewDialAccountConfig creates a new DialAccountConfig instance.
-func NewDialAccountConfig(account Credential, hashSalt string, cryptoAlgorithm string) *DialAccountConfig {
-	return &DialAccountConfig{
+func NewDialAccountConfig(account Credential, hashSalt, initPassword, cryptoAlgorithm string) *dialAccountConfig {
+	return &dialAccountConfig{
 		Account:         account,
 		HashSalt:        hashSalt,
+		InitPassword:    initPassword,
 		CryptoAlgorithm: cryptoAlgorithm,
 	}
 }
 
-// DialConnConfig holds the configuration for the connection destination.
-type DialConnConfig struct {
+// dialConnConfig holds the configuration for the connection destination.
+type dialConnConfig struct {
 	protocol.AddressHeader
 }
 
 // NewDialConnConfig creates a new DialConnConfig instance.
-func NewDialConnConfig(addr *protocol.AddressHeader) *DialConnConfig {
-	return &DialConnConfig{
+func NewDialConnConfig(addr *protocol.AddressHeader) *dialConnConfig {
+	return &dialConnConfig{
 		AddressHeader: *addr,
 	}
 }
@@ -142,12 +150,12 @@ func NewDialConnConfig(addr *protocol.AddressHeader) *DialConnConfig {
 // Dialer represents a Gordafarid dialer for establishing connections.
 type Dialer struct {
 	net.Dialer
-	accountConfig *DialAccountConfig
-	connConfig    *DialConnConfig
+	accountConfig *dialAccountConfig
+	connConfig    *dialConnConfig
 }
 
 // NewDialer creates a new Gordafarid Dialer instance.
-func NewDialer(accountConfig *DialAccountConfig, connConfig *DialConnConfig) *Dialer {
+func NewDialer(accountConfig *dialAccountConfig, connConfig *dialConnConfig) *Dialer {
 	return &Dialer{
 		accountConfig: accountConfig,
 		connConfig:    connConfig,
@@ -164,7 +172,7 @@ func (d *Dialer) dialTCP(ctx context.Context, addr string) (net.Conn, error) {
 }
 
 // dial performs the Gordafarid handshake over an established TCP connection.
-func (d *Dialer) dial(ctx context.Context, dialConnConfig *DialConnConfig, tcpConn net.Conn) (net.Conn, error) {
+func (d *Dialer) dial(ctx context.Context, dialConnConfig *dialConnConfig, tcpConn net.Conn) (net.Conn, error) {
 	var conn *Conn
 	if dialConnConfig != nil {
 		conn = buildClientConn(tcpConn, d.accountConfig, dialConnConfig)
@@ -185,12 +193,12 @@ func (d *Dialer) dial(ctx context.Context, dialConnConfig *DialConnConfig, tcpCo
 }
 
 // Dial establishes a Gordafarid connection to the specified address.
-func (d *Dialer) Dial(dialConnConfig *DialConnConfig, addr string) (net.Conn, error) {
+func (d *Dialer) Dial(dialConnConfig *dialConnConfig, addr string) (net.Conn, error) {
 	return d.DialContext(context.Background(), dialConnConfig, addr)
 }
 
 // DialContext establishes a Gordafarid connection to the specified address with the given context.
-func (d *Dialer) DialContext(ctx context.Context, dialConnConfig *DialConnConfig, addr string) (net.Conn, error) {
+func (d *Dialer) DialContext(ctx context.Context, dialConnConfig *dialConnConfig, addr string) (net.Conn, error) {
 	tcpConn, err := d.dialTCP(ctx, addr)
 	if err != nil {
 		return nil, err
@@ -199,17 +207,17 @@ func (d *Dialer) DialContext(ctx context.Context, dialConnConfig *DialConnConfig
 }
 
 // WrapTCPContext wraps an existing TCP connection with Gordafarid protocol.
-func (d *Dialer) WrapTCPContext(ctx context.Context, dialConnConfig *DialConnConfig, conn net.Conn) (net.Conn, error) {
+func (d *Dialer) WrapTCPContext(ctx context.Context, dialConnConfig *dialConnConfig, conn net.Conn) (net.Conn, error) {
 	return d.dial(ctx, dialConnConfig, conn)
 }
 
 // WrapTCP wraps an existing TCP connection with Gordafarid protocol using the background context.
-func (d *Dialer) WrapTCP(dialConnConfig *DialConnConfig, conn net.Conn) (net.Conn, error) {
+func (d *Dialer) WrapTCP(dialConnConfig *dialConnConfig, conn net.Conn) (net.Conn, error) {
 	return d.WrapTCPContext(context.Background(), dialConnConfig, conn)
 }
 
 // DialContext establishes a Gordafarid connection with the given context and configuration.
-func DialContext(ctx context.Context, addr string, dialAccountConfig *DialAccountConfig, dialConnConfig *DialConnConfig) (net.Conn, error) {
+func DialContext(ctx context.Context, addr string, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) (net.Conn, error) {
 	d := NewDialer(dialAccountConfig, dialConnConfig)
 	tcpConn, err := d.dialTCP(ctx, addr)
 	if err != nil {
@@ -219,23 +227,23 @@ func DialContext(ctx context.Context, addr string, dialAccountConfig *DialAccoun
 }
 
 // Dial establishes a Gordafarid connection using the background context.
-func Dial(addr string, dialAccountConfig *DialAccountConfig, dialConnConfig *DialConnConfig) (net.Conn, error) {
+func Dial(addr string, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) (net.Conn, error) {
 	return DialContext(context.Background(), addr, dialAccountConfig, dialConnConfig)
 }
 
 // WrapTCPContext wraps an existing TCP connection with Gordafarid protocol using the given context.
-func WrapTCPContext(ctx context.Context, conn net.Conn, dialAccountConfig *DialAccountConfig, dialConnConfig *DialConnConfig) (net.Conn, error) {
+func WrapTCPContext(ctx context.Context, conn net.Conn, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) (net.Conn, error) {
 	d := NewDialer(dialAccountConfig, dialConnConfig)
 	return d.dial(ctx, nil, conn)
 }
 
 // WrapTCP wraps an existing TCP connection with Gordafarid protocol using the background context.
-func WrapTCP(conn net.Conn, dialAccountConfig *DialAccountConfig, dialConnConfig *DialConnConfig) (net.Conn, error) {
+func WrapTCP(conn net.Conn, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) (net.Conn, error) {
 	return WrapTCPContext(context.Background(), conn, dialAccountConfig, dialConnConfig)
 }
 
 // buildClientConn creates a new Gordafarid client connection from an underlying TCP connection.
-func buildClientConn(underlyingConn net.Conn, dialAccountConfig *DialAccountConfig, dialConnConfig *DialConnConfig) *Conn {
+func buildClientConn(underlyingConn net.Conn, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) *Conn {
 	accountHash := sha256.Sum256([]byte(dialAccountConfig.Account.Username + dialAccountConfig.Account.Password + string(dialAccountConfig.HashSalt[:])))
 
 	c := &Conn{

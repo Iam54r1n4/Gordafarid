@@ -7,13 +7,14 @@ cryptoAlgorithm = "chacha20-poly1305"
 
 # The gordafarid authentication on the server-side
 credentials = [
-    { username = "ZZA", password = "password000000000000000000000ZZA" },
+    { username = "return", password = "return00000000000000000000000ZZA" },
     { username = "xyz", password = "00000000000000000000000000000xyz" },
 ]
 
 [server]
 address = "127.0.0.1:9090"
-hashSalt = "salt"          # (Must be same in the both client and server) (OPTIONAL)
+hashSalt = "salt"                                 # (Must be same in the both client and server) (OPTIONAL)
+initPassword = "00000000000000000000000000000000" # The key used for client's initial greeting encryption (Must be 32 bytes and same in both client and server)
 
 # Timeout settings (OPTIONAL)
 [timeout]

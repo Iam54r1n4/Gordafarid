@@ -11,8 +11,9 @@ import (
 
 // serverAddr holds the configuration for the server
 type serverAddr struct {
-	Address  string `toml:"address"`  // The address for the server to listen on
-	HashSalt string `toml:"hashSalt"` // The hash salt for the Gordafarid
+	Address      string `toml:"address"`      // The address for the server to listen on
+	HashSalt     string `toml:"hashSalt"`     // The hash salt for the Gordafarid
+	InitPassword string `toml:"initPassword"` // The password used for sending client's initial greeting (in the server we decrypt it)
 }
 
 // ServerConfig represents the main configuration structure for the Gordafarid server.
@@ -51,6 +52,9 @@ func (sc *ServerConfig) validate() error {
 	var missingFields []string
 
 	// Check for missing required fields
+	if len(sc.Server.InitPassword) < 1 {
+		missingFields = append(missingFields, "server.initPassword")
+	}
 	if len(sc.Server.Address) < 1 {
 		missingFields = append(missingFields, "server.address")
 	}
@@ -62,7 +66,10 @@ func (sc *ServerConfig) validate() error {
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing fields: %s", strings.Join(missingFields, ", "))
 	}
-
+	// Check if InitPassword is 32 bytes
+	if len(sc.Server.InitPassword) != 32 {
+		return fmt.Errorf("the server.initPassword must be 32 bytes")
+	}
 	// Validate the server credentials
 	if len(sc.Credentials) < 1 {
 		return errEmptyServerCredentials

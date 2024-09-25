@@ -11,8 +11,9 @@ import (
 
 // clientAddr holds the configuration for the client
 type clientAddr struct {
-	Address  string `toml:"address"`  // The address for the client to connect to
-	HashSalt string `toml:"hashSalt"` // The hash salt for the Gordafarid
+	Address      string `toml:"address"`      // The address for the client to connect to
+	HashSalt     string `toml:"hashSalt"`     // The hash salt for the Gordafarid
+	InitPassword string `toml:"initPassword"` // The password used for sending client's initial greeting (in the server we decrypt it)
 }
 
 // socks5credentialsConfig is a map of usernames to passwords for SOCKS5 authentication
@@ -62,6 +63,9 @@ func (cc *ClientConfig) validate() error {
 	if len(cc.Server.Address) < 1 {
 		missingFields = append(missingFields, "server.address")
 	}
+	if len(cc.Client.InitPassword) < 1 {
+		missingFields = append(missingFields, "client.initPassword")
+	}
 	if len(cc.Client.Address) < 1 {
 		missingFields = append(missingFields, "client.address")
 	}
@@ -74,7 +78,10 @@ func (cc *ClientConfig) validate() error {
 	if len(cc.Account.Password) < 1 {
 		missingFields = append(missingFields, "account.password")
 	}
-
+	// Check if InitPassword is 32 bytes
+	if len(cc.Server.InitPassword) != 32 {
+		return fmt.Errorf("the client.initPassword must be 32 bytes")
+	}
 	// If any required fields are missing, return an error
 	if len(missingFields) > 0 {
 		return fmt.Errorf("missing fields: %s", strings.Join(missingFields, ", "))

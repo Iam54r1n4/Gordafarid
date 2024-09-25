@@ -66,7 +66,7 @@ func (s *Server) Listen() error {
 		}
 	}
 
-	listenConfig := gordafarid.NewServerConfig(gordafaridCredentials, flags.HashSaltFlag, s.cfg.CryptoAlgorithm, s.cfg.Timeout.GordafaridHandshakeTimeout)
+	listenConfig := gordafarid.NewServerConfig(gordafaridCredentials, flags.HashSaltFlag, s.cfg.CryptoAlgorithm, s.cfg.Server.InitPassword, s.cfg.Timeout.GordafaridHandshakeTimeout)
 	s.gordafaridListener, err = gordafarid.Listen(s.cfg.Server.Address, listenConfig)
 	if err != nil {
 		return err
