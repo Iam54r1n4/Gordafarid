@@ -78,7 +78,7 @@ func (cc *ClientConfig) validate() error {
 		missingFields = append(missingFields, "account.password")
 	}
 	// Check if InitPassword is 32 bytes
-	if len(cc.Server.InitPassword) != 32 {
+	if len(cc.Client.InitPassword) != 32 {
 		return fmt.Errorf("the client.initPassword must be 32 bytes")
 	}
 	// If any required fields are missing, return an error
