@@ -8,8 +8,6 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
 
-// TODO: implement handshake timeout
-
 // clientHandshake performs the client-side handshake process for establishing a secure connection.
 // It follows a series of steps to authenticate and set up encryption with the server.
 //
@@ -77,7 +75,12 @@ func (c *Conn) clientHandshake(ctx context.Context) error {
 // Returns:
 // - error: An error if the greeting couldn't be sent, nil otherwise
 func (c *Conn) clientSendGreeting(ctx context.Context) error {
-	_, err := utils.WriteWithContext(ctx, c.Conn, c.greeting.Bytes())
+	cipher_greeting, err := crypto.Encrypt_AES_GCM(c.greeting.Bytes(), c.config.initPassword[:])
+	if err != nil {
+		return errClientFailedToEncryptInitialGreeting
+	}
+
+	_, err = utils.WriteWithContext(ctx, c.Conn, cipher_greeting)
 	return err
 }
 

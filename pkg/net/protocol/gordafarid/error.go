@@ -10,8 +10,11 @@ var (
 	errServerFailedToHandleInitialGreeting         = errors.New("failed to send the Gordafarid initial greeting")
 	errServerFailedToSendGreetingFailedResponse    = errors.New("failed to send the Gordafarid initial greeting failed response")
 	errServerFailedToSendGreetingSuccessResponse   = errors.New("failed to send the Gordafarid initial greeting succeeded response")
+	errServerFailedToReadEncryptedInitialGreeting  = errors.New("failed to read the Gordafarid client's encrypted initial greeting")
+	errServerFailedToDecryptInitialGreeting        = errors.New("failed to decrypt the Gordafarid client's initial greeting")
 	errClientFailedToSendInitialGreeting           = errors.New("failed to send the Gordafarid initial greeting")
 	errClientFailedToHandleInitialGreetingResponse = errors.New("failed to handle the Gordafarid greeting response")
+	errClientFailedToEncryptInitialGreeting        = errors.New("failed to encrypt the Gordafarid initial greeting")
 
 	// Crypto errors
 	errFailedToBuildAEADCipher = errors.New("failed to build the Gordafarid AEAD cipher")
