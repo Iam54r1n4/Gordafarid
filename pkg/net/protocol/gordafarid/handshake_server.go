@@ -1,6 +1,7 @@
 package gordafarid
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
@@ -72,10 +73,23 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 // Returns:
 // - error: Any error that occurred during the greeting process.
 func (c *Conn) serverHandleGreeting(ctx context.Context) error {
-	// Step 1: Read and validate the protocol version
-	buf := make([]byte, 1)
 	var err error
-	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
+
+	// Step 1: Read the greeting data ciphertext and decrypt it
+	greetingCipherSize := crypto.AES_GCM_NonceSize + crypto.AES_GCM_AuthTagSize + c.greeting.Size()
+	greetingCipher := make([]byte, greetingCipherSize)
+	if _, err := utils.ReadWithContext(ctx, c.Conn, greetingCipher); err != nil {
+		return errors.Join(errServerFailedToReadEncryptedInitialGreeting, err)
+	}
+	greetingPlaintext, err := crypto.Decrypt_AES_GCM(greetingCipher, c.config.initPassword[:])
+	if err != nil {
+		return errServerFailedToDecryptInitialGreeting
+	}
+	greetingPlaintextReader := bytes.NewReader(greetingPlaintext)
+
+	// Step 2: Read and validate the protocol version
+	buf := make([]byte, 1)
+	if _, err = utils.ReadWithContext(ctx, greetingPlaintextReader, buf); err != nil {
 		return errors.Join(errUnableToReadVersion, err)
 	}
 	if buf[0] != gordafaridVersion {
@@ -83,9 +97,9 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	}
 	c.greeting.Version = buf[0]
 
-	// Step 2: Read and validate the command
+	// Step 3: Read and validate the command
 	buf = make([]byte, 1)
-	if _, err = utils.ReadWithContext(ctx, c.Conn, buf); err != nil {
+	if _, err = utils.ReadWithContext(ctx, greetingPlaintextReader, buf); err != nil {
 		return errors.Join(errUnableToReadCmd, err)
 	}
 	if buf[0] != protocol.CmdConnect {
@@ -93,9 +107,9 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	}
 	c.greeting.Cmd = buf[0]
 
-	// Step 3: Read and validate the account hash
+	// Step 4: Read and validate the account hash
 	buf = make([]byte, HashSize)
-	n, err := utils.ReadWithContext(ctx, c.Conn, buf)
+	n, err := utils.ReadWithContext(ctx, greetingPlaintextReader, buf)
 	if err != nil {
 		return errors.Join(errUnableToReadAccountHash, err)
 	}
@@ -104,7 +118,7 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	}
 	copy(c.greeting.hash[:], buf)
 
-	// Step 4: Perform authentication
+	// Step 5: Perform authentication
 	if err = c.handleAuthentication(); err != nil {
 		return err
 	}
