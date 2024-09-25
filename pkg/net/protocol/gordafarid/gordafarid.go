@@ -41,7 +41,7 @@ type ServerConfig struct {
 	Credentials         []Credential // Server-side credentials for authentication
 	EncryptionAlgorithm string       // Encryption algorithm to be used
 	InitPassword        string       // Initial password for decrypting the client's initial greeting
-	HandshakeTimeout    int          // Handshake timeout in seconds
+	HandshakeTimeout    int          // Server handshake timeout in seconds
 }
 
 // NewServerConfig creates a new ServerConfig instance with the provided parameters.
@@ -76,8 +76,8 @@ type serverCredentials map[Hash][]byte
 type Config struct {
 	serverCredentials   serverCredentials
 	encryptionAlgorithm string
-	initPassword        [InitPasswordSize]byte
-	handshakeTimeout    int // In seconds
+	initPassword        [InitPasswordSize]byte // Initial password for decrypting the client's initial greeting
+	handshakeTimeout    int                    // Server handshake timeout in seconds
 }
 
 // NewListener creates a new Gordafarid Listener wrapping the provided net.Listener.
@@ -118,17 +118,18 @@ func Listen(laddr string, config *ServerConfig) (*Listener, error) {
 // dialAccountConfig holds the configuration for client-side authentication.
 type dialAccountConfig struct {
 	Account         Credential
-	InitPassword    string // Client side init password for encrypting the client's initial greeting
+	InitPassword    [InitPasswordSize]byte // Client side init password for encrypting the client's initial greeting
 	CryptoAlgorithm string
 }
 
 // NewDialAccountConfig creates a new DialAccountConfig instance.
 func NewDialAccountConfig(account Credential, initPassword, cryptoAlgorithm string) *dialAccountConfig {
-	return &dialAccountConfig{
+	d := &dialAccountConfig{
 		Account:         account,
-		InitPassword:    initPassword,
 		CryptoAlgorithm: cryptoAlgorithm,
 	}
+	copy(d.InitPassword[:], []byte(initPassword))
+	return d
 }
 
 // dialConnConfig holds the configuration for the connection destination.
@@ -247,6 +248,7 @@ func buildClientConn(underlyingConn net.Conn, dialAccountConfig *dialAccountConf
 		isClient: true,
 		config: &Config{
 			encryptionAlgorithm: dialAccountConfig.CryptoAlgorithm,
+			initPassword:        dialAccountConfig.InitPassword,
 		},
 		account: account{
 			hash:     accountHash,
