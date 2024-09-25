@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
@@ -14,13 +15,13 @@ import (
 //
 // Parameters:
 //   - ctx: The context for cancellation and timeout control.
-//   - c: The net.Conn to read from.
+//   - r: An io.Reader to read from, usually a net.Conn.
 //   - buf: The buffer to read data into.
 //
 // Returns:
 //   - int: The number of bytes read.
 //   - error: Any error that occurred during the read operation or context cancellation.
-func ReadWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
+func ReadWithContext(ctx context.Context, r io.Reader, buf []byte) (int, error) {
 	readChan := make(chan struct {
 		n   int
 		err error
@@ -28,7 +29,7 @@ func ReadWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
 
 	go func() {
 		defer close(readChan)
-		n, err := c.Read(buf)
+		n, err := r.Read(buf)
 		readChan <- struct {
 			n   int
 			err error
@@ -51,13 +52,13 @@ func ReadWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
 //
 // Parameters:
 //   - ctx: The context for cancellation and timeout control.
-//   - c: The net.Conn to write to.
+//   - w: A writer to write to, usually a net.Conn.
 //   - buf: The buffer containing data to write.
 //
 // Returns:
 //   - int: The number of bytes written.
 //   - error: Any error that occurred during the write operation or context cancellation.
-func WriteWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) {
+func WriteWithContext(ctx context.Context, w io.Writer, buf []byte) (int, error) {
 	writeChan := make(chan struct {
 		n   int
 		err error
@@ -65,7 +66,7 @@ func WriteWithContext(ctx context.Context, c net.Conn, buf []byte) (int, error) 
 
 	go func() {
 		defer close(writeChan)
-		n, err := c.Write(buf)
+		n, err := w.Write(buf)
 		writeChan <- struct {
 			n   int
 			err error
