@@ -8,9 +8,6 @@ import (
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 )
 
-// DefaultHashSalt is the default hash salt for the Gordafarid authentication
-const defaultHashSalt = "ZZA"
-
 // timeoutConfig holds various timeout settings for the application.
 type timeoutConfig struct {
 	DialTimeout                int `toml:"dialTimeout"`                // Dial timeout in seconds

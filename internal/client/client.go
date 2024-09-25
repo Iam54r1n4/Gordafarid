@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
-	"github.com/Iam54r1n4/Gordafarid/internal/flags"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/shared_error"
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
@@ -100,7 +99,7 @@ func (c *Client) Start() error {
 
 	// Create a Gordafarid dialer
 	credential := gordafarid.NewCredential(c.cfg.Account.Username, c.cfg.Account.Password)
-	accountConfig := gordafarid.NewDialAccountConfig(credential, flags.HashSaltFlag, c.cfg.CryptoAlgorithm)
+	accountConfig := gordafarid.NewDialAccountConfig(credential, c.cfg.Client.InitPassword, c.cfg.CryptoAlgorithm)
 	c.gordafaridDialer = gordafarid.NewDialer(accountConfig, nil)
 
 	for {

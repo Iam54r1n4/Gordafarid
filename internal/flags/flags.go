@@ -8,9 +8,6 @@ import (
 var (
 	// CfgPathFlag is the path to the configuration file
 	CfgPathFlag string
-
-	// HashSaltFlag is the hash salt for Gordafarid authentication
-	HashSaltFlag string
 )
 
 // Default values for the flags

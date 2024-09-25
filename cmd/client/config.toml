@@ -12,11 +12,10 @@ password = "password000000000000000000000ZZA" # Must satisfy the specified algor
 
 [client]
 address = "127.0.0.1:8080"
-hashSalt = "salt"          # Must be same in the both client and server (OPTIONAL)
+initPassword = "00000000000000000000000000000000" # The key used for client's initial greeting encryption (Must be 32 bytes and same in both client and server)
 
 [server]
 address = "127.0.0.1:9090"
-initPassword = "00000000000000000000000000000000" # The key used for client's initial greeting encryption (Must be 32 bytes and same in both client and server)
 
 # SOCKS5 username/password authentication on the client-side (OPTIONAL)
 [socks5Credentials]

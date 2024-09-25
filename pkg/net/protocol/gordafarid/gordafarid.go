@@ -39,17 +39,15 @@ func NewCredential(username, password string) Credential {
 // ServerConfig holds the configuration options for a Gordafarid server.
 type ServerConfig struct {
 	Credentials         []Credential // Server-side credentials for authentication
-	HashSalt            string       // Salt used in hash calculations (required for both server and client)
 	EncryptionAlgorithm string       // Encryption algorithm to be used
 	InitPassword        string       // Initial password for decrypting the client's initial greeting
 	HandshakeTimeout    int          // Handshake timeout in seconds
 }
 
 // NewServerConfig creates a new ServerConfig instance with the provided parameters.
-func NewServerConfig(credentials []Credential, hashSalt, encryptionAlgorithm, initPassword string, handshakeTimeout int) *ServerConfig {
+func NewServerConfig(credentials []Credential, encryptionAlgorithm, initPassword string, handshakeTimeout int) *ServerConfig {
 	return &ServerConfig{
 		Credentials:         credentials,
-		HashSalt:            hashSalt,
 		EncryptionAlgorithm: encryptionAlgorithm,
 		InitPassword:        initPassword,
 		HandshakeTimeout:    handshakeTimeout,
@@ -62,7 +60,7 @@ func (scc *ServerConfig) convertToRealConfig() *Config {
 	realConfig.serverCredentials = make(serverCredentials, len(scc.Credentials))
 
 	for _, item := range scc.Credentials {
-		hash := sha256.Sum256([]byte(item.Username + item.Password + string(scc.HashSalt[:])))
+		hash := sha256.Sum256([]byte(item.Username + item.Password))
 		realConfig.serverCredentials[hash] = []byte(item.Password)
 	}
 	realConfig.encryptionAlgorithm = scc.EncryptionAlgorithm
@@ -120,16 +118,14 @@ func Listen(laddr string, config *ServerConfig) (*Listener, error) {
 // dialAccountConfig holds the configuration for client-side authentication.
 type dialAccountConfig struct {
 	Account         Credential
-	HashSalt        string
 	InitPassword    string // Client side init password for encrypting the client's initial greeting
 	CryptoAlgorithm string
 }
 
 // NewDialAccountConfig creates a new DialAccountConfig instance.
-func NewDialAccountConfig(account Credential, hashSalt, initPassword, cryptoAlgorithm string) *dialAccountConfig {
+func NewDialAccountConfig(account Credential, initPassword, cryptoAlgorithm string) *dialAccountConfig {
 	return &dialAccountConfig{
 		Account:         account,
-		HashSalt:        hashSalt,
 		InitPassword:    initPassword,
 		CryptoAlgorithm: cryptoAlgorithm,
 	}
@@ -244,7 +240,7 @@ func WrapTCP(conn net.Conn, dialAccountConfig *dialAccountConfig, dialConnConfig
 
 // buildClientConn creates a new Gordafarid client connection from an underlying TCP connection.
 func buildClientConn(underlyingConn net.Conn, dialAccountConfig *dialAccountConfig, dialConnConfig *dialConnConfig) *Conn {
-	accountHash := sha256.Sum256([]byte(dialAccountConfig.Account.Username + dialAccountConfig.Account.Password + string(dialAccountConfig.HashSalt[:])))
+	accountHash := sha256.Sum256([]byte(dialAccountConfig.Account.Username + dialAccountConfig.Account.Password))
 
 	c := &Conn{
 		Conn:     underlyingConn,

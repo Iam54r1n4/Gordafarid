@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Iam54r1n4/Gordafarid/internal/config"
-	"github.com/Iam54r1n4/Gordafarid/internal/flags"
 	"github.com/Iam54r1n4/Gordafarid/internal/logger"
 	"github.com/Iam54r1n4/Gordafarid/internal/shared_error"
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
@@ -66,7 +65,7 @@ func (s *Server) Listen() error {
 		}
 	}
 
-	listenConfig := gordafarid.NewServerConfig(gordafaridCredentials, flags.HashSaltFlag, s.cfg.CryptoAlgorithm, s.cfg.Server.InitPassword, s.cfg.Timeout.GordafaridHandshakeTimeout)
+	listenConfig := gordafarid.NewServerConfig(gordafaridCredentials, s.cfg.CryptoAlgorithm, s.cfg.Server.InitPassword, s.cfg.Timeout.GordafaridHandshakeTimeout)
 	s.gordafaridListener, err = gordafarid.Listen(s.cfg.Server.Address, listenConfig)
 	if err != nil {
 		return err

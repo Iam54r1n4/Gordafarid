@@ -13,7 +13,6 @@ credentials = [
 
 [server]
 address = "127.0.0.1:9090"
-hashSalt = "salt"                                 # (Must be same in the both client and server) (OPTIONAL)
 initPassword = "00000000000000000000000000000000" # The key used for client's initial greeting encryption (Must be 32 bytes and same in both client and server)
 
 # Timeout settings (OPTIONAL)

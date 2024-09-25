@@ -12,7 +12,6 @@ import (
 // serverAddr holds the configuration for the server
 type serverAddr struct {
 	Address      string `toml:"address"`      // The address for the server to listen on
-	HashSalt     string `toml:"hashSalt"`     // The hash salt for the Gordafarid
 	InitPassword string `toml:"initPassword"` // The password used for sending client's initial greeting (in the server we decrypt it)
 }
 
@@ -107,9 +106,5 @@ func (sc *ServerConfig) applyDefaultValues() {
 	// Set default GordafaridHandshakeTimeout to 10 seconds if not specified
 	if sc.Timeout.GordafaridHandshakeTimeout == 0 {
 		sc.Timeout.GordafaridHandshakeTimeout = 10
-	}
-
-	if len(sc.Server.HashSalt) < 1 {
-		sc.Server.HashSalt = defaultHashSalt
 	}
 }
