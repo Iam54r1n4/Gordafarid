@@ -1,4 +1,5 @@
-package gordafarid
+// The cipher_conn package provides encrypted connection using the AEAD cipher.
+package cipher_conn
 
 import (
 	"context"
@@ -11,16 +12,6 @@ import (
 
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/nonce_cache"
 )
-
-// Packet Schema:
-// +----------------+--------------------+------------------------+
-// | Message Length | Nonce              | Encrypted Message      |
-// | (2 bytes)      | (AEAD Nonce Size)  | (Variable Length)      |
-// +----------------+--------------------+------------------------+
-//
-// 1. Message Length (2 bytes): Indicates the total length of the following data (Nonce + Encrypted Message)
-// 2. Nonce (AEAD Nonce Size): A unique value for each message to ensure security
-// 3. Encrypted Message: The actual message content, encrypted using the AEAD cipher
 
 const (
 	// packetMessageLengthSize is the maximum bytes for storing the length of a message.
