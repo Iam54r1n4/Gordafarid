@@ -1,3 +1,6 @@
+// Package nonce_cache provides a mechanism for managing nonce storage and checking for replay attacks.
+// It implements a NonceCache type that stores nonces with timestamps and allows for expiration
+// of old nonces to prevent memory exhaustion.
 package nonce_cache
 
 import (
