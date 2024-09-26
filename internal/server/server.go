@@ -152,7 +152,7 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 	logger.Debug("The Gordafarid handshake result received")
 
 	// Establish a connection to the target server with a timeout
-	logger.Debug("Connecting to:", dstAddr)
+	logger.Debug("Connecting to: ", dstAddr)
 	tconn, err := net.DialTimeout("tcp", targetAddr, time.Duration(s.cfg.Timeout.DialTimeout)*time.Second)
 	if err != nil {
 		// Log a warning if unable to connect to the target server
