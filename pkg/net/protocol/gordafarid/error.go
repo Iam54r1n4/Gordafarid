@@ -13,7 +13,6 @@ var (
 	errServerFailedToReadEncryptedInitialGreeting          = errors.New("failed to read the Gordafarid client's encrypted initial greeting")
 	errServerFailedToDecryptInitialGreeting                = errors.New("failed to decrypt the Gordafarid client's initial greeting")
 	errServerDuplicatedAESGCMNonceUsedPossibleReplayAttack = errors.New("duplicated nonce used for client's initial greeting, replay attack is possible")
-	errServerDuplicatedAEADNonceUsedPossibleReplayAttack   = errors.New("duplicated nonce used for AEAD ciphers (post-handshake), replay attack is possible")
 	errClientFailedToSendInitialGreeting                   = errors.New("failed to send the Gordafarid initial greeting")
 	errClientFailedToHandleInitialGreetingResponse         = errors.New("failed to handle the Gordafarid greeting response")
 	errClientFailedToEncryptInitialGreeting                = errors.New("failed to encrypt the Gordafarid initial greeting")
