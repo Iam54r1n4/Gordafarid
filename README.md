@@ -17,36 +17,37 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
    - Flexible Configuration: Easily customizable through TOML configuration files, allowing for versatile deployment scenarios.
 
    - Code Documentation: the code is well-documented, so you can easily understand the code.
+   
 ## Technical Overview
 
 - #### Protocol Specification
-   - Please read [GORDAFARID_SPECIFICATION.md](https://github.com/Iam54r1n4/Gordafarid/blob/main/pkg/net/protocol/gordafarid/GORDAFARID_SPECIFICATION.md)
+   - **Please read [GORDAFARID_SPECIFICATION.md](https://github.com/Iam54r1n4/Gordafarid/blob/main/pkg/net/protocol/gordafarid/GORDAFARID_SPECIFICATION.md)**
    - Also, the code has been written in a way that you can easily understand the concepts, there are lots of comments to help you understand the code.
    
 - #### Traffic Flow
     - Overview:
-        - Local Application ⇄ Client Proxy ⇄ (Encrypted Data) ⇄ Server Proxy ⇄ Target Server
+        - Local Application ⇄ Client Proxy ⇄ (Encrypted Data) ⇄ Server Proxy ⇄ Target Server.
 
     - Client-Side Flow:
-        - Local Application initiates SOCKS5 request to Client proxy
-        - Client performs SOCKS5 handshake and authentication using the SOCKS5 authentication mechanism if `socks5Credentials` is not empty
-        - Client extracts target address from SOCKS5 handshake
-        - Client establishes connection to the Proxy Server using Gordafarid protocol
-        - Client sends encrypted Gordafarid `Initial Greeting` to Proxy Server using the AES/GCM algorithm and the pre-shared key specified in the `initPassword` field of the config file
+        - Local Application initiates SOCKS5 request to Client proxy.
+        - Client performs SOCKS5 handshake and authentication using the SOCKS5 authentication mechanism if `socks5Credentials` is not empty.
+        - Client extracts target address from SOCKS5 handshake.
+        - Client establishes connection to the Proxy Server using Gordafarid protocol.
+        - Client sends encrypted Gordafarid `Initial Greeting` to Proxy Server using the AES/GCM algorithm and the pre-shared key specified in the `initPassword` field of the config file.
             > `NOTICE`: After this stage, all communication is encrypted using an AEAD cipher specified in the config file, with its key being the account password.
-        - Cilent receives `Greeting Response` from the server and decrypts it
-        - Client encrypts and sends `Request` to Proxy Server
-        - Client receives and decrypts `Reply` from Proxy Server
-        - Client begins relaying encrypted data between the Local Application and the Proxy Server
+        - Cilent receives `Greeting Response` from the server and decrypts it.
+        - Client encrypts and sends `Request` to Proxy Server.
+        - Client receives and decrypts `Reply` from Proxy Server.
+        - Client begins relaying encrypted data between the Local Application and the Proxy Server.
 
     - Server-Side Flow:
-        - Proxy Server receives Gordafarid `Initial Greeting` from Client Proxy and decrypts it using AES/GCM algorithm and pre-shared key and specified in the `initPassword` field of the config file
+        - Proxy Server receives Gordafarid `Initial Greeting` from Client Proxy and decrypts it using AES/GCM algorithm and pre-shared key and specified in the `initPassword` field of the config file.
             > `NOTICE`: After this stage, all communication is encrypted using an AEAD cipher specified in the config file, with its key being the account password.
-        - Proxy Server sends encrypted Gordafarid `Greeting Response` to Client Proxy
-        - Proxy Server receives and decrypts `Request` from Client Proxy 
-        - Proxy Server sends encrypted `Reply` to Client proxy
-        - Proxy Server establishes connection to Target Server that was indicated in the handshake process
-        - Proxy Server begins relaying encrypted data between Client Proxy and Target Server
+        - Proxy Server sends encrypted Gordafarid `Greeting Response` to Client Proxy.
+        - Proxy Server receives and decrypts `Request` from Client Proxy .
+        - Proxy Server sends encrypted `Reply` to Client proxy.
+        - Proxy Server establishes connection to Target Server that was indicated in the handshake process.
+        - Proxy Server begins relaying encrypted data between Client Proxy and Target Server.
 
 
 - #### Codebase Overview
