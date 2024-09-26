@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aead"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aes_gcm"
 )
 
 // clientAddr holds the configuration for the client
@@ -77,8 +78,8 @@ func (cc *ClientConfig) validate() error {
 	if len(cc.Account.Password) < 1 {
 		missingFields = append(missingFields, "account.password")
 	}
-	// Check if InitPassword is 32 bytes
-	if len(cc.Client.InitPassword) != 32 {
+	// Check if InitPassword is supported by AES algorithm
+	if !aes_gcm.IsAESPasswordSupported(cc.Client.InitPassword) {
 		return fmt.Errorf("the client.initPassword must be 32 bytes")
 	}
 	// If any required fields are missing, return an error
@@ -87,7 +88,7 @@ func (cc *ClientConfig) validate() error {
 	}
 
 	// Validate the crypto algorithm and password
-	if err := crypto.IsCryptoSupported(cc.CryptoAlgorithm, cc.Account.Password); err != nil {
+	if err := aead.IsCryptoSupported(cc.CryptoAlgorithm, cc.Account.Password); err != nil {
 		return err
 	}
 

@@ -6,7 +6,9 @@ import (
 	"errors"
 
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol"
-	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/cipher_conn"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aead"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aes_gcm"
 
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
@@ -37,12 +39,12 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 		return errors.Join(errServerFailedToHandleInitialGreeting, err)
 	}
 	// Step 3: Set up encryption using the client's password sent in the greeting
-	aead, err := crypto.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
+	aead, err := aead.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
 	if err != nil {
 		return errors.Join(errFailedToBuildAEADCipher, err)
 	}
 	// Wrap the existing connection with the newly created cipher for secure communication
-	c.Conn = WrapConnToCipherConn(c.Conn, aead)
+	c.Conn = cipher_conn.WrapConnToCipherConn(c.Conn, aead)
 
 	// Step 2: Send a success message for the greeting
 	if err = c.serverSendGreetingSuccess(ctx); err != nil {
@@ -76,14 +78,14 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	var err error
 
 	// Step 1: Read the greeting data ciphertext and decrypt it
-	greetingCipherSize := crypto.AES_GCM_NonceSize + crypto.AES_GCM_AuthTagSize + c.greeting.Size()
+	greetingCipherSize := aes_gcm.AES_GCM_NonceSize + aes_gcm.AES_GCM_AuthTagSize + c.greeting.Size()
 	greetingCipher := make([]byte, greetingCipherSize)
 	if _, err := utils.ReadWithContext(ctx, c.Conn, greetingCipher); err != nil {
 		return errors.Join(errServerFailedToReadEncryptedInitialGreeting, err)
 	}
-	greetingPlaintext, err := crypto.Decrypt_AES_GCM(greetingCipher, c.config.initPassword[:])
+	greetingPlaintext, err := aes_gcm.Decrypt_AES_GCM(greetingCipher, c.config.initPassword[:])
 	if err != nil {
-		if errors.Is(crypto.ErrDuplicatedNonceUsed, err) {
+		if errors.Is(aes_gcm.ErrDuplicatedNonceUsed, err) {
 			return errors.Join(errServerDuplicatedAESGCMNonceUsedPossibleReplayAttack, err)
 		}
 		return errServerFailedToDecryptInitialGreeting

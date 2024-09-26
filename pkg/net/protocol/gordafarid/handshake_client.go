@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/cipher_conn"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aead"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aes_gcm"
 	"github.com/Iam54r1n4/Gordafarid/pkg/net/utils"
 )
 
@@ -38,12 +40,12 @@ func (c *Conn) clientHandshake(ctx context.Context) error {
 		return errors.Join(errClientFailedToSendInitialGreeting, err)
 	}
 	// Step 2: Set up encryption using the client's password
-	aead, err := crypto.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
+	aead, err := aead.NewAEAD(c.config.encryptionAlgorithm, c.account.password)
 	if err != nil {
 		return errors.Join(errFailedToBuildAEADCipher, err)
 	}
 	// Wrap the existing connection with the newly created cipher for secure communication
-	c.Conn = WrapConnToCipherConn(c.Conn, aead)
+	c.Conn = cipher_conn.WrapConnToCipherConn(c.Conn, aead)
 
 	// Step 3: Handle the server's response to the greeting
 	if err = c.clientHandleGreetingResponse(ctx); err != nil {
@@ -75,7 +77,7 @@ func (c *Conn) clientHandshake(ctx context.Context) error {
 // Returns:
 // - error: An error if the greeting couldn't be sent, nil otherwise
 func (c *Conn) clientSendGreeting(ctx context.Context) error {
-	cipher_greeting, err := crypto.Encrypt_AES_GCM(c.greeting.Bytes(), c.config.initPassword[:])
+	cipher_greeting, err := aes_gcm.Encrypt_AES_GCM(c.greeting.Bytes(), c.config.initPassword[:])
 	if err != nil {
 		return errClientFailedToEncryptInitialGreeting
 	}

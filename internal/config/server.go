@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto"
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/crypto/aead"
 )
 
 // serverAddr holds the configuration for the server
@@ -83,8 +83,8 @@ func (sc *ServerConfig) validate() error {
 		}
 
 		// Check if the crypto algorithm is supported and the password meets the requirements
-		if err := crypto.IsCryptoSupported(sc.CryptoAlgorithm, cred.Password); err != nil {
-			keyLength, _ := crypto.GetAlgorithmKeySize(sc.CryptoAlgorithm)
+		if err := aead.IsCryptoSupported(sc.CryptoAlgorithm, cred.Password); err != nil {
+			keyLength, _ := aead.GetAlgorithmKeySize(sc.CryptoAlgorithm)
 			return fmt.Errorf("element at index %d has invalid password in credentials, the required length is %d", i, keyLength)
 		}
 	}
