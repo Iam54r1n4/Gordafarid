@@ -2,11 +2,13 @@
 package crypto
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"sync"
 	"time"
+
+	"github.com/Iam54r1n4/Gordafarid/pkg/net/protocol/gordafarid/nonce_cache"
 )
 
 // AES_GCM_NonceSize is the size of the nonce used in AES-GCM encryption.
@@ -17,26 +19,18 @@ const AES_GCM_NonceSize = 12
 // It is set to 16 bytes, which provides strong integrity protection.
 const AES_GCM_AuthTagSize = 16
 
-var (
-	// nonceStorage is a thread-safe map used to store nonces to prevent reuse.
-	nonceStorage = sync.Map{}
+// NonceCache is a cache of nonces used in AES-GCM encryption to prevent nonce reuse.
+var nonceCache *nonce_cache.NonceCache
+
+func init() {
+	// nonceExpiryTime is the duration after which a nonce is considered expired.
+	nonceExpiryTime := time.Minute * 60
+	nonceCache = nonce_cache.NewNonceCache(nonceExpiryTime)
 
 	// cleanupInterval is the duration between nonce cleanup operations.
-	cleanupInterval = time.Minute * 10
-
-	// nonceExpiryTime is the duration after which a nonce is considered expired.
-	nonceExpiryTime = time.Minute * 60
-)
-
-// init starts a goroutine that periodically cleans up old nonces.
-func init() {
-	go func() {
-		ticker := time.NewTicker(cleanupInterval)
-		defer ticker.Stop()
-		for range ticker.C {
-			cleanupOldNonces()
-		}
-	}()
+	cleanupInterval := time.Minute * 20
+	// Start the cleanup routine in the background that periodically cleans up old nonces.
+	nonceCache.StartCleanupRoutine(context.Background(), cleanupInterval)
 }
 
 // Encrypt_AES_GCM encrypts the plaintext using AES-GCM with the provided key.
@@ -63,9 +57,9 @@ func Encrypt_AES_GCM(plaintext []byte, key []byte) ([]byte, error) {
 		}
 
 		// Check if the nonce has been used before
-		if !existsNonce(nonce) {
+		if !nonceCache.Exists(nonce) {
 			// Store the new nonce
-			storeNonce(nonce)
+			nonceCache.Store(nonce)
 			break
 		}
 		// If the nonce exists, the loop will continue and generate a new one
@@ -102,11 +96,11 @@ func Decrypt_AES_GCM(ciphertext []byte, key []byte) ([]byte, error) {
 	// Split the nonce and the encrypted data
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	// Check if the nonce has been used before, if used before replay attack is possible
-	if existsNonce(nonce) {
+	if nonceCache.Exists(nonce) {
 		return nil, ErrDuplicatedNonceUsed
 	}
 	// Store the new nonce
-	storeNonce(nonce)
+	nonceCache.Store(nonce)
 
 	// Decrypt and verify the ciphertext
 	plaintext, err := gcm.Open(nil, []byte(nonce), []byte(ciphertext), nil)
@@ -114,28 +108,4 @@ func Decrypt_AES_GCM(ciphertext []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return plaintext, nil
-}
-
-// storeNonce stores a nonce in the nonceStorage map with the current timestamp.
-func storeNonce(nonce []byte) {
-	nonceStorage.Store(string(nonce), time.Now().Unix())
-}
-
-// existsNonce checks if a nonce exists in the nonceStorage map.
-func existsNonce(nonce []byte) bool {
-	_, ok := nonceStorage.Load(string(nonce))
-	return ok
-}
-
-// cleanupOldNonces removes expired nonces from the nonceStorage map.
-func cleanupOldNonces() {
-	nowTimestamp := time.Now().Unix()
-	nonceStorage.Range(func(key, value any) bool {
-		nonceTimestamp := value.(int64)
-		nonceExpirySeconds := int64(nonceExpiryTime.Seconds())
-		if (nowTimestamp - nonceTimestamp) > nonceExpirySeconds {
-			nonceStorage.Delete(key) // Delete expired nonce
-		}
-		return true
-	})
 }
