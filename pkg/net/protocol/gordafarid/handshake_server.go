@@ -84,7 +84,7 @@ func (c *Conn) serverHandleGreeting(ctx context.Context) error {
 	greetingPlaintext, err := crypto.Decrypt_AES_GCM(greetingCipher, c.config.initPassword[:])
 	if err != nil {
 		if errors.Is(crypto.ErrDuplicatedNonceUsed, err) {
-			return errors.Join(errServerDuplicatedNonceUsedPossibleReplayAttack, err)
+			return errors.Join(errServerDuplicatedAESGCMNonceUsedPossibleReplayAttack, err)
 		}
 		return errServerFailedToDecryptInitialGreeting
 	}
