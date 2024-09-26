@@ -88,14 +88,27 @@ func (s *Server) Start() error {
 	}
 
 	acceptedConnChan := make(chan *gordafarid.Conn, 64)
-	errChan := make(chan error)
+	errChan := make(chan error, 64)
+	defer close(acceptedConnChan)
+	defer close(errChan)
+
 	go func() {
 		for {
 			conn, err := s.gordafaridListener.Accept()
 			if err != nil {
-				errChan <- err
+				select {
+				case errChan <- err:
+				default:
+					logger.Warn("Error channel is full, dropping error:", err)
+				}
+
 			}
-			acceptedConnChan <- conn
+			select {
+			case acceptedConnChan <- conn:
+			default:
+				logger.Warn("Connection channel is full, dropping connection from:", conn.RemoteAddr())
+				conn.Close() // Optionally close the connection if the buffer is full
+			}
 		}
 	}()
 
