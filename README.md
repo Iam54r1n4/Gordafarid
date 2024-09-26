@@ -3,67 +3,54 @@
 Gordafarid is a simple encrypted proxy server/client implementation in Go. Designed primarily for educational purposes, this project demonstrates how to build a basic proxy system with encryption, leveraging AEAD ciphers for secure communication.
 
 #### Key Points
-   - Implemented SOCKS5 handshake process for client-side
-   - Implemented SOCKS5 Username/Password authentication process for client-side
-   - Implemented custom protocol named Gordafarid for client-server communication
-   - Utilize AEAD ciphers for data encryption
-   - Configurable: Easily customizable with TOML configuration files
+   - **Educational: Designed as a learning tool to demonstrate proxy server/client implementation with encryption in Go.**
+   - Gordafarid Protocol: Implemented a proxy protocol named Gordafarid, inspired by SOCKS5, for secure client-server communication.
 
+   - Secure Communication: All data exchanged between client and server is encrypted. The `Initial Greeting` is encrypted using AES/GCM, and the rest is encrypted using an AEAD cipher.
+
+   - AEAD algorithm support: Supports ChaCha20-Poly1305/AES-256-GCM/AES-192-GCM/AES-128-GCM cryptographic algorithms for secure application data communication(After the `Initial Greeting`).
+
+   - User management: Supports multiple users with different credentials, allowing for fine-grained access control.
+
+   - Authentication: Implements SOCKS5 username/password authentication on the client-side for local applications.
+
+   - Flexible Configuration: Easily customizable through TOML configuration files, allowing for versatile deployment scenarios.
+
+   - Code Documentation: the code is well-documented, so you can easily understand the code.
 ## Technical Overview
 
 - #### Protocol Specification
-   - Please read [GORDAFARID_SPECIFICATION.md](https://github.com/Iam54r1n4/Gordafarid/blob/main/GORDAFARID_SPECIFICATION.MD)
-   - Also, the code has been written in a way that you can easily understand the concepts. Believe me, there are lots of comments to help you understand the code
+   - Please read [GORDAFARID_SPECIFICATION.md](https://github.com/Iam54r1n4/Gordafarid/blob/main/pkg/net/protocol/gordafarid/GORDAFARID_SPECIFICATION.md)
+   - Also, the code has been written in a way that you can easily understand the concepts, there are lots of comments to help you understand the code.
+   
+- #### Traffic Flow
+    - Overview:
+        - Local Application ⇄ Client Proxy ⇄ (Encrypted Data) ⇄ Server Proxy ⇄ Target Server
 
-- #### Encryption
-   - Uses ChaCha20-Poly1305/AES-256-GCM/AES-192-GCM/AES-128-GCM cryptography algorithms for secure communication, based on configs in the config file (config.toml)
+    - Client-Side Flow:
+        - Local Application initiates SOCKS5 request to Client proxy
+        - Client performs SOCKS5 handshake and authentication using the SOCKS5 authentication mechanism if `socks5Credentials` is not empty
+        - Client extracts target address from SOCKS5 handshake
+        - Client establishes connection to the Proxy Server using Gordafarid protocol
+        - Client sends encrypted Gordafarid `Initial Greeting` to Proxy Server using the AES/GCM algorithm and the pre-shared key specified in the `initPassword` field of the config file
+            > `NOTICE`: After this stage, all communication is encrypted using an AEAD cipher specified in the config file, with its key being the account password.
+        - Cilent receives `Greeting Response` from the server and decrypts it
+        - Client encrypts and sends `Request` to Proxy Server
+        - Client receives and decrypts `Reply` from Proxy Server
+        - Client begins relaying encrypted data between the Local Application and the Proxy Server
+
+    - Server-Side Flow:
+        - Proxy Server receives Gordafarid `Initial Greeting` from Client Proxy and decrypts it using AES/GCM algorithm and pre-shared key and specified in the `initPassword` field of the config file
+            > `NOTICE`: After this stage, all communication is encrypted using an AEAD cipher specified in the config file, with its key being the account password.
+        - Proxy Server sends encrypted Gordafarid `Greeting Response` to Client Proxy
+        - Proxy Server receives and decrypts `Request` from Client Proxy 
+        - Proxy Server sends encrypted `Reply` to Client proxy
+        - Proxy Server establishes connection to Target Server that was indicated in the handshake process
+        - Proxy Server begins relaying encrypted data between Client Proxy and Target Server
+
 
 - #### Codebase Overview
-
-   - cmd/client/: Entry point for the Client application
-      - cmd/client/config.toml: the Client configuration file
-   - cmd/server/: Entry point for the Server application
-      - cmd/server/config.toml: the Server configuration file
-
-   - internal/server/: The main server logic
-      - Implements the main server functionality
-      - Manages incoming connections and handles the Gordafarid protocol
-   
-   - internal/client/: The main client logic
-      - Implements the main client functionality
-      - Manages outgoing connections and handles the Gordafarid protocol
-
-   - internal/config/: Configuration management
-      - Handles configuration management for both client and server
-      - Loads and parses configuration files
-
-   - internal/logger/: Logging
-      - Provides structured logging capabilities for the application
-
-   - internal/flags: Command-line flags parsing
-      - Manages command-line flags for application
-
-   - internal/shared_error: Shared error handling
-      - Defines common error types used across the application
-
-
-   - pkg/net/protocol/socks: SOCKS5 server-side protocol implementation
-      - Implements the SOCKS5 protocol for server-side operations
-      - Handles SOCKS5 handshake, authentication, and connection requests
-      - Defines structures for various SOCKS5 headers and messages
-
-
-   - pkg/net/protocol/gordafarid: The Gordafarid protocol implementation
-      - Handles handshake process and authentication for Gordafarid connections
-      - Manages encrypted connections using AEAD ciphers
-
-   - pkg/net/protocol/gordafarid/cipher: AEAD ciphers implementation
-      - Provides implementations of AEAD ciphers for Gordafarid connections
-
-
-- #### Security Considerations
-   - All communication between client and server is encrypted using a pre-shared key shared, except Gordafarid `Initial Greeting`
-   - SOCKS5 Username/Password authentication implemented on the client side
+    - Please read [CODEBASE_OVERVIEW.md](https://github.com/Iam54r1n4/Gordafarid/blob/main/CODEBASE_OVERVIEW.md)
 
 ## Installation
 
@@ -136,7 +123,7 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 - This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Acknowledgements
-- Special thanks to [@ReturnFI](https://github.com/ReturnFI) for their valuable assistance
+- Special thanks to [@ReturnFI](https://github.com/ReturnFI) for their valuable assistance.
 
 ## Disclaimer
 
