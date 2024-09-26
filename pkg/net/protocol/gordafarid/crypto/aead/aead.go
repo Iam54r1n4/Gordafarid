@@ -1,5 +1,5 @@
-// Package crypto provides cryptographic functionality for the Gordafarid project.
-package crypto
+// Package aead package provides AEAD cryptographic functionality for the Gordafarid project.
+package aead
 
 import (
 	"crypto/aes"
