@@ -1,5 +1,5 @@
-// Package crypto provides encryption and decryption functions using AES-GCM.
-package crypto
+// Package aes_gcm provides encryption and decryption functions using AES-GCM.
+package aes_gcm
 
 import (
 	"context"
@@ -108,4 +108,16 @@ func Decrypt_AES_GCM(ciphertext []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 	return plaintext, nil
+}
+
+// IsAESPasswordSupported checks if the given password is suitable for AES encryption.
+// It returns true if the password length is 16, 24, or 32 bytes (128, 192, or 256 bits),
+// which are the supported key sizes for AES.
+func IsAESPasswordSupported(password string) bool {
+	switch len(password) {
+	case 16, 24, 32:
+		return true
+	default:
+		return false
+	}
 }
