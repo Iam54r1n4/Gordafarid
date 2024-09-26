@@ -86,15 +86,27 @@ func (s *Server) Start() error {
 	if s.gordafaridListener == nil {
 		return shared_error.ErrListenerIsNotInitialized
 	}
-	for {
-		conn, err := s.gordafaridListener.Accept()
-		if err != nil {
-			logger.Warn(errors.Join(shared_error.ErrConnectionAccepting, err))
-			continue
+
+	acceptedConnChan := make(chan *gordafarid.Conn, 64)
+	errChan := make(chan error)
+	go func() {
+		for {
+			conn, err := s.gordafaridListener.Accept()
+			if err != nil {
+				errChan <- err
+			}
+			acceptedConnChan <- conn
 		}
-		logger.Info("Accepted connection from:", conn.RemoteAddr())
-		//ctx, _ := context.WithTimeout(context.Background(), time.Hour*1)
-		go s.handleConnection(conn)
+	}()
+
+	for {
+		select {
+		case conn := <-acceptedConnChan:
+			logger.Info("Accepted connection from:", conn.RemoteAddr())
+			go s.handleConnection(conn)
+		case err := <-errChan:
+			logger.Warn(errors.Join(shared_error.ErrConnectionAccepting, err))
+		}
 	}
 }
 
