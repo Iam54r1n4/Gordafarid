@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Match version tags (e.g., v1.0.0)
+
+jobs:
+  build:
+    name: Build for all architectures
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        binary: [server, client] # Build both server and client binaries
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Setup Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22.2' # Use the specified Go version
+
+      # Build the binaries
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          cd cmd/${{ matrix.binary }} # Navigate to the binary's directory (client or server)
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ../../dist/gordafarid-${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }}
+
+      # Upload the binaries as artifacts
+      - name: Upload binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-${{ matrix.binary }}
+          path: dist/*
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Download the build artifacts from the build job
+      - name: Download server binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-server
+          path: dist
+      - name: Download client binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries-client
+          path: dist
+
+      # Create GitHub release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      # Upload the server binaries to the release
+      - name: Upload Server Binaries
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/gordafarid-server-*
+          asset_name: gordafarid-server-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_content_type: application/octet-stream
+
+      # Upload the client binaries to the release
+      - name: Upload Client Binaries
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/gordafarid-client-*
+          asset_name: gordafarid-client-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          asset_content_type: application/octet-stream
