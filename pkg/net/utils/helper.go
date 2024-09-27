@@ -123,3 +123,15 @@ func ReadPort(ctx context.Context, conn net.Conn) ([2]byte, error) {
 	}
 	return port, nil
 }
+
+// IPBytesToString converts IP bytes to a string based on the address type
+func IPBytesToString(atyp byte, ip []byte) string {
+	switch atyp {
+	case protocol.AtypIPv4, protocol.AtypIPv6:
+		return net.IP(ip).String()
+	case protocol.AtypDomain:
+		return string(ip)
+	default:
+		return ""
+	}
+}

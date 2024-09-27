@@ -181,7 +181,7 @@ func (s *Server) handleConnection(gc *gordafarid.Conn) {
 	}
 
 	// Extract target server information from the handshake result
-	dstAddr := string(handshakeResult.DstAddr)
+	dstAddr := utils.IPBytesToString(handshakeResult.Atyp, handshakeResult.DstAddr)
 	dstPort := binary.BigEndian.Uint16(handshakeResult.DstPort[:])
 	targetAddr := net.JoinHostPort(dstAddr, fmt.Sprint(dstPort))
 
