@@ -20,7 +20,9 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
 
    - Code Documentation: the code is well-documented, so you can easily understand the code.
 
+   > - UDP support is not yet implemented. Contributions to add this feature are welcome.
    
+   > - Technically speaking, the Gordafarid protocol doesn't disguise itself from DPI, so its traffic detection is not difficult.
    
 ## Technical Overview
 
