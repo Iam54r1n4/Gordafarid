@@ -35,11 +35,17 @@ jobs:
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ../../dist/gordafarid-${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }}
 
       # Upload the binaries as artifacts
-      - name: Upload binaries
+      - name: Upload server binaries
         uses: actions/upload-artifact@v3
         with:
-          name: binaries-${{ matrix.binary }}
-          path: dist/*
+          name: binaries-server
+          path: dist/gordafarid-server-*
+
+      - name: Upload client binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries-client
+          path: dist/gordafarid-client-*
 
   release:
     name: Create GitHub Release
@@ -50,18 +56,6 @@ jobs:
       # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
-
-      # Download the build artifacts from the build job
-      - name: Download server binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries-server
-          path: dist
-      - name: Download client binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries-client
-          path: dist
 
       # Create GitHub release
       - name: Create Release
@@ -77,18 +71,32 @@ jobs:
 
       # Upload the server binaries to the release
       - name: Upload Server Binaries
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gordafarid-server-*
-          asset_name: gordafarid-server-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
+        run: |
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              asset_name=gordafarid-server-v${{ github.ref }}-$os-$arch
+              asset_path=dist/gordafarid-server-$os-$arch
+              if [ -f "$asset_path" ]; then
+                echo "Uploading $asset_path as $asset_name"
+                curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/octet-stream" --data-binary @"$asset_path" "${{ steps.create_release.outputs.upload_url }}?name=$asset_name"
+              else
+                echo "File $asset_path does not exist, skipping upload."
+              fi
+            done
+          done
 
       # Upload the client binaries to the release
       - name: Upload Client Binaries
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gordafarid-client-*
-          asset_name: gordafarid-client-${{ github.ref }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
+        run: |
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              asset_name=gordafarid-client-v${{ github.ref }}-$os-$arch
+              asset_path=dist/gordafarid-client-$os-$arch
+              if [ -f "$asset_path" ]; then
+                echo "Uploading $asset_path as $asset_name"
+                curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/octet-stream" --data-binary @"$asset_path" "${{ steps.create_release.outputs.upload_url }}?name=$asset_name"
+              else
+                echo "File $asset_path does not exist, skipping upload."
+              fi
+            done
+          done
