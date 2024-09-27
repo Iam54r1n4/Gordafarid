@@ -9,6 +9,10 @@ jobs:
   build:
     name: Build for all architectures
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      repository-projects: write
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +55,8 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: write # Ensure this is set for creating releases
 
     steps:
       # Checkout the repository
