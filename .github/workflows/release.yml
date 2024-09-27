@@ -1,95 +1,86 @@
-name: Build and Release
+name: Build and Publish Release
 
 on:
   push:
     tags:
-      - 'v*' # Match version tags (e.g., v1.0.0)
-
-
-# Permission can be added at job level or workflow level
-permissions:
-  contents: write   # This is required to create/push the new git tag
+      - 'v*'  # Trigger on version tags (v1.0, v2.0, etc.)
 
 jobs:
   build:
-    name: Build for all architectures
     runs-on: ubuntu-latest
+
     strategy:
-      fail-fast: false
       matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-        binary: [server, client]
+        os: [linux, windows, darwin]
+        arch: [amd64, arm64]
 
     steps:
-      # Checkout the repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.22'
 
-      # Setup Go environment
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22.2'
+    - name: Build binaries
+      env:
+        GOOS: ${{ matrix.os }}
+        GOARCH: ${{ matrix.arch }}
+      run: |
+        mkdir -p bin/${{ matrix.os }}_${{ matrix.arch }}
+        echo "Building for OS: $GOOS, ARCH: $GOARCH"
+        GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o bin/${{ matrix.os }}_${{ matrix.arch }}/client ./cmd/client
+        GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build -o bin/${{ matrix.os }}_${{ matrix.arch }}/server ./cmd/server
 
-      # Build the binaries
-      - name: Build binaries
-        run: |
-          mkdir -p dist
-          cd cmd/${{ matrix.binary }}
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o ../../dist/gordafarid-${{ matrix.binary }}-${{ matrix.goos }}-${{ matrix.goarch }}
+    - name: List binaries
+      run: ls -R bin/
 
-      # Upload the binaries as artifacts
-      - name: Upload server binaries
-        uses: actions/upload-artifact@v3
-        with:
-          name: binaries-server
-          path: dist/gordafarid-server-*
+    - name: Extract tag name
+      id: extract_tag
+      run: echo "TAG_NAME=$(echo $GITHUB_REF | sed 's/refs\/tags\///')" >> $GITHUB_ENV
 
-      - name: Upload client binaries
-        uses: actions/upload-artifact@v3
-        with:
-          name: binaries-client
-          path: dist/gordafarid-client-*
+    - name: Rename and Prepare Files for Release
+      run: |
+        BASE_NAME="gordafarid"
+        # Rename binaries to the specified format
+        if [[ "${{ matrix.os }}" == "windows" ]]; then
+          mv bin/${{ matrix.os }}_${{ matrix.arch }}/client bin/${{ matrix.os }}_${{ matrix.arch }}/${BASE_NAME}-client-${TAG_NAME}-${{ matrix.os }}-${{ matrix.arch }}.exe
+          mv bin/${{ matrix.os }}_${{ matrix.arch }}/server bin/${{ matrix.os }}_${{ matrix.arch }}/${BASE_NAME}-server-${TAG_NAME}-${{ matrix.os }}-${{ matrix.arch }}.exe
+        else
+          mv bin/${{ matrix.os }}_${{ matrix.arch }}/client bin/${{ matrix.os }}_${{ matrix.arch }}/${BASE_NAME}-client-${TAG_NAME}-${{ matrix.os }}-${{ matrix.arch }}
+          mv bin/${{ matrix.os }}_${{ matrix.arch }}/server bin/${{ matrix.os }}_${{ matrix.arch }}/${BASE_NAME}-server-${TAG_NAME}-${{ matrix.os }}-${{ matrix.arch }}
+        fi
 
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      contents: write # Ensure this is set for creating releases
+    - name: List files after renaming
+      run: ls -R bin/
 
-    steps:
-      # Checkout the repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ env.TAG_NAME }}
+        name: Release ${{ env.TAG_NAME }}
+        body: |
+          Binaries for ${{ env.TAG_NAME }}
+      continue-on-error: true # Allows it to continue even if the release already exists
 
-      # Create GitHub release
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      # Upload the server binaries to the release
-      - name: Upload Server Binaries
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gordafarid-server-*
-          asset_name: gordafarid-server-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
-
-      # Upload the client binaries to the release
-      - name: Upload Client Binaries
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/gordafarid-client-*
-          asset_name: gordafarid-client-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          asset_content_type: application/octet-stream
+    - name: Upload Release Assets
+      uses: softprops/action-gh-release@v1
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ env.TAG_NAME }}
+        files: |
+          bin/linux_amd64/gordafarid-client-${{ env.TAG_NAME }}-linux-amd64
+          bin/linux_amd64/gordafarid-server-${{ env.TAG_NAME }}-linux-amd64
+          bin/linux_arm64/gordafarid-client-${{ env.TAG_NAME }}-linux-arm64
+          bin/linux_arm64/gordafarid-server-${{ env.TAG_NAME }}-linux-arm64
+          bin/windows_amd64/gordafarid-client-${{ env.TAG_NAME }}-windows-amd64.exe
+          bin/windows_amd64/gordafarid-server-${{ env.TAG_NAME }}-windows-amd64.exe
+          bin/windows_arm64/gordafarid-client-${{ env.TAG_NAME }}-windows-arm64.exe
+          bin/windows_arm64/gordafarid-server-${{ env.TAG_NAME }}-windows-arm64.exe
+          bin/darwin_amd64/gordafarid-client-${{ env.TAG_NAME }}-darwin-amd64
+          bin/darwin_amd64/gordafarid-server-${{ env.TAG_NAME }}-darwin-amd64
+          bin/darwin_arm64/gordafarid-client-${{ env.TAG_NAME }}-darwin-arm64
+          bin/darwin_arm64/gordafarid-server-${{ env.TAG_NAME }}-darwin-arm64
