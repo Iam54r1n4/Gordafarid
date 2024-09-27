@@ -101,8 +101,14 @@ func (s *Server) Start() error {
 				default:
 					logger.Warn("Error channel is full, dropping error:", err)
 				}
-
+				// Skip the rest of the loop iteration if there's an error
+				continue
 			}
+			if conn == nil {
+				logger.Warn("Accepted a nil connection, WTF?!")
+				continue
+			}
+
 			select {
 			case acceptedConnChan <- conn:
 			default:
@@ -115,6 +121,12 @@ func (s *Server) Start() error {
 	for {
 		select {
 		case conn := <-acceptedConnChan:
+			// Ensure conn is not nil before accessing its methods
+			if conn == nil {
+				logger.Warn("Received nil connection from channel, WTF?!")
+				continue
+			}
+
 			logger.Info("Accepted connection from:", conn.RemoteAddr())
 			go s.handleConnection(conn)
 		case err := <-errChan:
