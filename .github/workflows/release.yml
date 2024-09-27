@@ -6,9 +6,9 @@ on:
       - 'v*' # Match version tags (e.g., v1.0.0)
 
 
-# Permission can be added at job level or workflow level
 permissions:
-  contents: write   # This is required to create/push the new git tag
+    contents: write
+    packages: write
 
 jobs:
   build:
