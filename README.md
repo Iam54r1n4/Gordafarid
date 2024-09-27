@@ -9,6 +9,8 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
    - Secure Communication: All data exchanged between client and server is encrypted. The `Initial Greeting` is encrypted using AES/GCM, and the rest is encrypted using an AEAD cipher.
 
    - AEAD algorithm support: Supports ChaCha20-Poly1305/AES-256-GCM/AES-192-GCM/AES-128-GCM cryptographic algorithms for secure application data communication(After the `Initial Greeting`).
+   
+   - Reply attacks: Implements a mechanism to prevent replay attacks by checking for nonce reusage in encrypted communications.
 
    - User management: Supports multiple users with different credentials, allowing for fine-grained access control.
 
@@ -17,6 +19,8 @@ Gordafarid is a simple encrypted proxy server/client implementation in Go. Desig
    - Flexible Configuration: Easily customizable through TOML configuration files, allowing for versatile deployment scenarios.
 
    - Code Documentation: the code is well-documented, so you can easily understand the code.
+
+   
    
 ## Technical Overview
 
